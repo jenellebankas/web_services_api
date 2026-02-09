@@ -16,7 +16,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from app.database import SessionLocal
 from app import models
 
-DATASET_PATH = Path("datasets/StressLevelDataset.csv")
+DATASET_PATH = Path("../datasets/StressLevelDataset.csv")
 
 def parse_date(raw: str) -> date:
     # Adjust this to match your CSV format, or fix date elsewhere.
