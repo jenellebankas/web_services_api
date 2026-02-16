@@ -1,1 +1,2 @@
 sqlalchemy~=2.0.45
+fastapi~=0.128.0
