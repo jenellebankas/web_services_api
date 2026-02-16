@@ -207,11 +207,11 @@ marimo/_lsp/
 __marimo__/
 
 # DATA STUFF
-data/
-data/flights_2023.csv
-data/flights_2024.csv
-data/airports_2023.csv
-data/airports_2024.csv
+datasets/
+datasets/flights_2023.csv
+datasets/flights_2024.csv
+datasets/airports_2023.csv
+datasets/airports_2024.csv
 
 # env stuff
 .venv/
