@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="burnout" uuid="677f1d93-6249-45b7-9f57-4546330e17d7">
+    <data-source source="LOCAL" name="aviation" uuid="6d7d2631-0003-402f-b40c-ec9f655d1b0c">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
-      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/burnout.db</jdbc-url>
+      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/aviation.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
       <libraries>
         <library>

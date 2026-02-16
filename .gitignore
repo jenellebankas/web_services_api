@@ -212,3 +212,9 @@ data/flights_2023.csv
 data/flights_2024.csv
 data/airports_2023.csv
 data/airports_2024.csv
+
+# env stuff
+.venv/
+*.pyc
+aviation.db
+
