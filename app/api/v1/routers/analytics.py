@@ -22,7 +22,6 @@ class AirportDelaysResponse(BaseModel):
 def get_airport_delays(airport: str, db: Session = Depends(get_db)):
     """Airport analytics - PURE text SQL"""
 
-    # SQLAlchemy text() = RAW SQL with parameter binding
     result = db.execute(
         text("""
             SELECT 
