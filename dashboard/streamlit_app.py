@@ -20,6 +20,7 @@ if st.button("Analyse Airport", type="primary"):
             # Call your existing endpoints
             delays = requests.get(f"{API_BASE}/api/v1/analytics/airport-delays/{airport}", timeout=10).json()
             score = requests.get(f"{API_BASE}/api/v1/analytics/disruption-score/{airport}", timeout=10).json()
+            year = requests.get(f"{API_BASE}/api/v1/analytics/year-over-year/{airport}", timeout=10).json()
 
             # Metrics row
             col1, col2, col3, col4 = st.columns(4)
@@ -39,8 +40,8 @@ if st.button("Analyse Airport", type="primary"):
             with col_b:
                 # YOY comparison (adjust fields to match your schema)
                 st.bar_chart({
-                    "2023 Delay Rate": [score.get("year_2023", {}).get("delay_rate", 0)],
-                    "2024 Delay Rate": [delays["delay_rate"]]
+                    "2023 Delay Rate": [year.get("year_2023", {}).get("delay_rate", 0)],
+                    "2024 Delay Rate": [year.get("year_2024", {}).get("delay_rate", 0)]
                 })
 
         except requests.exceptions.RequestException:
