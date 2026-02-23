@@ -35,6 +35,7 @@ def get_flight(
         raise HTTPException(status_code=404, detail="Flight not found")
     return flight
 
+
 @router.put("/{flight_id}", response_model=FlightRead)
 def update_flight(
     flight_id: int,

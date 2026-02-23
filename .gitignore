@@ -217,4 +217,3 @@ datasets/airports_2024.csv
 # env stuff
 .venv/
 *.pyc
-aviation.db

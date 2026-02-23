@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: aviation_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../aviation.db:/app/aviation.db
