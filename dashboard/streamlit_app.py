@@ -6,7 +6,7 @@ import requests
 
 st.set_page_config(page_title="Aviation Analytics", layout="wide")
 
-API_BASE = st.secrets.get("API_BASE_URL", "http://localhost:8000")
+API_BASE = st.secrets.get("API_BASE_URL", "https://web-services-api.onrender.com/")
 
 st.title("Aviation Disruption Dashboard")
 st.markdown("**FastAPI Backend** → " + API_BASE)

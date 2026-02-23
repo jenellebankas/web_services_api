@@ -36,7 +36,7 @@ async def root():
 
 @app.get("/dashboard")
 async def dashboard_redirect():
-    return RedirectResponse(url="https://your-dashboard.streamlit.app")
+    return RedirectResponse(url="https://webservicesapi-dashboard.streamlit.app")
 
 app.include_router(flights.router, prefix="/api/v1/flights", tags=["flights"])
 app.include_router(analytics.router, prefix="/api/v1", tags=["analytics"])
