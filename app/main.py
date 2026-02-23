@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine
 from app import models
 from app.api.v1.routers import flights, analytics
@@ -12,20 +13,27 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# ADD CORS MIDDLEWARE
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://*.streamlit.app"],  # Streamlit Cloud
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Root route - shows API status + links
+
 @app.get("/")
 async def root():
     return {
-        "message": "🛫 Aviation Disruption API",
+        "message": "Aviation Disruption API",
         "docs": "/docs",
         "dashboard": "/dashboard",
         "flights": "/api/v1/flights",
-        "analytics": "/api/v1/analytics/airport-delays/LAX"
+        "analytics": "/api/v1/analytics"
     }
 
 
-# Dashboard redirect (browser goes to Streamlit)
 @app.get("/dashboard")
 async def dashboard_redirect():
     return RedirectResponse(url="https://your-dashboard.streamlit.app")
