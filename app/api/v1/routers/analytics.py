@@ -540,7 +540,7 @@ def system_overview(db: Session = Depends(get_db)):
 def carrier_performance(year: int = 2024, db: Session = Depends(get_db)):
     result = db.execute(text("""
         SELECT 
-            DISTINCT reporting_airline,
+            DISTINCT reporting_airline as reporting_airline,
             COUNT(*) as total_flights,
             ROUND((1.0 - AVG(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END)), 3) as otp_pct
         FROM flights 
@@ -553,7 +553,7 @@ def carrier_performance(year: int = 2024, db: Session = Depends(get_db)):
 
     return [
         {
-            "carrier": r.uniquecarrier,
+            "carrier": r.reporting_airline,
             "otp_pct": float(r.otp_pct),
             "total_flights": int(r.total_flights),
             "delay_rate": round(1 - float(r.otp_pct), 3)
