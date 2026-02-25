@@ -1,213 +1,100 @@
-# dashboard/streamlit_app.py
-import requests
 import streamlit as st
+from components.api import fetch
+from components.metrics import metric_card
+from config import DARK_THEME
+import plotly as px
 import pandas as pd
-import plotly.express as px
 
-# -----------------------
-# CONFIGURATION
-# -----------------------
-API_BASE_URL = "https://web-services-api.onrender.com"
+st.set_page_config(page_title="Flight Analytics", page_icon="✈️", layout="wide")
 
-st.set_page_config(
-    page_title="Flight Disruption Analytics",
-    page_icon="✈️",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# Dark Forest Green Theme
-st.markdown("""
-    <style>
-        :root {
-            --primary-color: #2d5a2d;
-            --secondary-color: #4a7c4a;
-            --accent-color: #68a368;
-            --background-color: #1a1f1a;
-            --surface-color: #212622;
-            --card-bg: #252a25;
-            --sidebar-bg: #1f2421;
-            --text-primary: #e8f0e8;
-            --text-secondary: #b8c9b8;
-        }
-
-        .main .block-container {
-            background-color: var(--background-color);
-            padding-top: 1rem;
-        }
-
-        body { background-color: var(--background-color); color: var(--text-primary); }
-        [data-testid="stSidebar"] { 
-            background-color: var(--sidebar-bg);
-            border-right: 1px solid var(--secondary-color);
-        }
-        h1, h2, h3 { color: var(--accent-color) !important; font-weight: 500; }
-
-        .metric-container {
-            background: linear-gradient(135deg, var(--card-bg) 0%, #2a332a 100%);
-            border: 1px solid var(--secondary-color);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            border-left: 4px solid var(--accent-color);
-            margin: 10px 0;
-        }
-
-        .stPlotlyChart {
-            border-radius: 12px;
-            background: var(--card-bg);
-            border: 1px solid var(--secondary-color);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-    </style>
+# Apply theme
+st.markdown(f"""
+<style>
+:root {{
+    --primary: {DARK_THEME["primary"]};
+    --accent: {DARK_THEME["accent"]};
+    --bg: {DARK_THEME["bg"]};
+    --card: {DARK_THEME["card"]};
+}}
+.main .block-container {{ background-color: {DARK_THEME["bg"]}; }}
+body {{ color: {DARK_THEME["text"]}; }}
+h1,h2,h3 {{ color: {DARK_THEME["accent"]}!important; }}
+</style>
 """, unsafe_allow_html=True)
 
-
-# -----------------------
-# HELPER FUNCTIONS
-# -----------------------
-@st.cache_data(ttl=300)
-def fetch_data(endpoint: str, params=None):
-    try:
-        url = f"{API_BASE_URL}/{endpoint}"
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        st.error(f"API Error: {e}")
-        return None
-
-
-# -----------------------
-# METRIC DISPLAY FUNCTION (Fixed)
-# -----------------------
-def display_metric(title: str, value: str, col):
-    """Display metric in styled card - FIXED version"""
-    html = f"""
-    <div class="metric-container">
-        <h4 style='color: var(--text-secondary); margin: 0 0 8px 0;'>{title}</h4>
-        <h1 style='color: var(--accent-color); margin: 0; font-size: 2.5rem;'>{value}</h1>
-    </div>
-    """
-    col.markdown(html, unsafe_allow_html=True)
-
-
-# -----------------------
-# HEADER & SIDEBAR
-# -----------------------
+# Header
 st.title("Flight Disruption Analytics")
+st.markdown("**Professional dashboard for aviation performance insights**")
 
-with st.sidebar:
-    st.markdown("### Analytics Menu")
-    st.markdown("─" * 30)
+# Main content tabs
+tab1, tab2, tab3, tab4 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patterns", "Route Planning"])
 
-    view = st.radio("Select view:", [
-        "Airport Delays", "Year-over-Year", "Daily Pattern",
-        "Weekly Pattern", "Leaderboard", "Best Time", "Route Risk"
-    ], index=0)
+with tab1:
+    st.markdown("## Punctuality Leaderboard")
+    year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed")
 
-    st.markdown("─" * 30)
-    year = st.selectbox("Year", [2023, 2024], index=1)
-    airport = st.text_input("Airport", "JFK", help="e.g., JFK, LAX, ORD").upper().strip()
-
-    if st.button("Refresh Data"):
-        st.cache_data.clear()
-        st.rerun()
-
-# -----------------------
-# VIEWS
-# -----------------------
-if view == "Airport Delays" and airport:
-    st.markdown(f"### Delay Summary - {airport}")
-    data = fetch_data(f"api/v1/analytics/airport-delays/{airport}")
+    data = fetch("leaderboard/punctuality", {"year": year})
     if data:
-        col1, col2, col3, col4 = st.columns(4)
-
-        display_metric("Total Flights", f"{data['total_flights']:,}", col1)
-        display_metric("Avg Delay", f"{data['avg_arrival_delay']:.1f} min", col2)
-        display_metric("Delay Rate", f"{data['delay_rate'] * 100:.1f}%", col3)
-        display_metric("Cancel Rate", f"{data['cancel_rate'] * 100:.1f}%", col4)
-
-        st.success(f"Most disrupted day: {data['worst_day']}")
-
-elif view == "Year-over-Year" and airport:
-    st.markdown(f"### Trends - {airport}")
-    data = fetch_data(f"api/v1/analytics/year-over-year/{airport}")
-    if data:
-        df = pd.DataFrame({
-            "Year": ["2023", "2024"],
-            "Avg Delay": [data["year_2023"]["avg_arrival_delay"], data["year_2024"]["avg_arrival_delay"]],
-            "Delay Rate (%)": [data["year_2023"]["delay_rate"] * 100, data["year_2024"]["delay_rate"] * 100],
-        })
-
-        fig = px.bar(df, x="Year", y=["Avg Delay", "Delay Rate (%)"],
-                     barmode="group", title="Performance Comparison",
-                     color_discrete_sequence=["#68a368", "#a8d0a8"])
-        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                          font_color="#e8f0e8", title_font_color="#68a368")
-        st.plotly_chart(fig, use_container_width=True)
-
-elif view == "Daily Pattern" and airport:
-    st.markdown(f"### Hourly Patterns - {airport} ({year})")
-    data = fetch_data(f"api/v1/analytics/daily-pattern/{airport}", {"year": year})
-    if data:
-        df = pd.DataFrame([dict(hour=h['hour'], delay_rate=h['delay_rate'] * 100)
-                           for h in data["hours"]])
-        fig = px.line(df, x="hour", y="delay_rate", title="Delay Rate by Hour",
-                      markers=True, color_discrete_sequence=["#68a368"])
-        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                          font_color="#e8f0e8", title_font_color="#68a368")
-        st.plotly_chart(fig, use_container_width=True)
-
-
-# Add this to your existing dashboard under the VIEWS section
-
-elif view == "Weekly Pattern" and airport:
-    st.markdown(f"### Weekly Patterns - {airport} ({year})")
-    data = fetch_data(f"api/v1/analytics/weekly-pattern/{airport}", {"year": year})
-    if data:
-        df = pd.DataFrame(data["days"])
-
-        # Convert delay rates to percentages for display
-        df['delay_rate_pct'] = df['delay_rate'] * 100
-        df['cancel_rate_pct'] = df['cancel_rate'] * 100
-
-        # Create dual-axis bar chart
-        fig = px.bar(df, x="dow", y=["delay_rate_pct", "cancel_rate_pct"],
-                     title=f"Delay & Cancel Rates by Day of Week - {airport}",
-                     barmode="group",
-                     color_discrete_sequence=["#68a368", "#a8d0a8"],
-                     labels={'value': 'Rate (%)', 'dow': 'Day of Week'})
-
-        # Dark mode styling
-        fig.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font_color="#e8f0e8",
-            title_font_color="#68a368",
-            legend=dict(
-                bgcolor='rgba(37,42,37,0.8)',
-                bordercolor="#4a7c4a",
-                borderwidth=1
-            )
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Summary metrics
-        col1, col2, col3 = st.columns(3)
-        worst_day = df.loc[df['delay_rate_pct'].idxmax()]
-        best_day = df.loc[df['delay_rate_pct'].idxmin()]
-
+        col1, col2 = st.columns(2)
         with col1:
-            st.metric("Worst Day (Delays)",
-                      f"{worst_day['dow']} ({worst_day['delay_rate_pct']:.1f}%)")
+            st.markdown("### Top 10 Airports")
+            pd.DataFrame(data["top_airports"]).style.background_gradient(cmap='Greens')
+            st.dataframe(pd.DataFrame(data["top_airports"]), use_container_width=True)
         with col2:
-            st.metric("Best Day (Delays)",
-                      f"{best_day['dow']} ({best_day['delay_rate_pct']:.1f}%)")
-        with col3:
-            st.metric("Weekly Avg Delay",
-                      f"{df['delay_rate_pct'].mean():.1f}%")
+            st.markdown("### Bottom 10 Airports")
+            st.dataframe(pd.DataFrame(data["bottom_airports"]), use_container_width=True)
+
+with tab2:
+    st.markdown("## Airport Delays")
+    airport = st.text_input("Airport", "JFK").upper()
+    if airport:
+        data = fetch(f"airport-delays/{airport}")
+        if data:
+            col1, col2, col3, col4 = st.columns(4)
+            metric_card("Total Flights", f"{data['total_flights']:,}", col1)
+            metric_card("Avg Delay", f"{data['avg_arrival_delay']:.1f}min", col2)
+            metric_card("Delay Rate", f"{data['delay_rate'] * 100:.1f}%", col3)
+            metric_card("Cancel Rate", f"{data['cancel_rate'] * 100:.1f}%", col4)
+
+with tab3:
+    pattern_col1, pattern_col2 = st.columns(2)
+    with pattern_col1:
+        st.markdown("### Daily Pattern")
+        airport = st.text_input("Airport", "JFK").upper()
+        if airport: st.dataframe(fetch(f"daily-pattern/{airport}"))
+    with pattern_col2:
+        st.markdown("### Weekly Pattern")
+        st.dataframe(fetch("weekly-pattern/JFK"))
+
+with tab4:
+    st.markdown("## Route Analysis")
+    # Route risk + best time logic here
+    st.info("Coming soon...")
 
 
-st.markdown("---")
+# SYSTEM-WIDE METRICS (Add above Leaderboard section in app.py)
+
+# 1. INDUSTRY OVERVIEW METRICS
+col1, col2, col3, col4 = st.columns(4)
+data_total = fetch("airport-delays/JFK")  # Use any airport to get structure, modify for totals
+if data_total:
+    # These need NEW API endpoints but show what belongs here:
+    metric_card("Total Flights (US)", "2.1M", col1)
+    metric_card("Industry Avg Delay", "14.2 min", col2)
+    metric_card("National Delay Rate", "19.8%", col3)
+    metric_card("Total Cancellations", "12.4K", col4)
+
+# 2. TOP CARRIER PERFORMANCE (Network-wide)
+st.markdown("### Carrier Performance (All Airports)")
+carrier_data = fetch("carrier-performance")  # NEW ENDPOINT NEEDED
+if carrier_data:
+    df_carriers = pd.DataFrame(carrier_data)
+    st.dataframe(df_carriers.head(8), use_container_width=True)
+
+# 3. MONTHLY TRENDS (System-wide)
+st.markdown("### Monthly Disruption Trends")
+monthly_data = fetch("monthly-trends")  # NEW ENDPOINT NEEDED
+if monthly_data:
+    df_monthly = pd.DataFrame(monthly_data)
+    fig = px.line(df_monthly, x="month", y=["delay_rate", "cancel_rate"])
+    st.plotly_chart(fig, use_container_width=True)

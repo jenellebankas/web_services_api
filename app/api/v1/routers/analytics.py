@@ -515,3 +515,67 @@ def route_risk_score(
         riskiest_route=f"{origin}→{routes[-1].dest}",
         routes=routes,
     )
+
+
+@router.get("/system-overview")  # No response_model!
+def system_overview(db: Session = Depends(get_db)):
+    result = db.execute(text("""
+        SELECT 
+            COUNT(*) as total_flights,
+            ROUND(AVG(COALESCE(arr_delay_minutes, 0)), 1) as avg_delay,
+            ROUND(AVG(CASE WHEN arr_del_15 = 1 THEN 1.0 ELSE 0 END), 3) as delay_rate,
+            SUM(cancelled) as total_cancelled
+        FROM flights
+    """)).fetchone()
+
+    return {
+        "total_flights": int(result.total_flights),
+        "avg_delay_minutes": float(result.avg_delay),
+        "national_delay_rate": float(result.delay_rate),
+        "total_cancellations": int(result.total_cancelled)
+    }
+
+
+@router.get("/carrier-performance")
+def carrier_performance(year: int = 2024, db: Session = Depends(get_db)):
+    result = db.execute(text("""
+        SELECT 
+            uniquecarrier,
+            COUNT(*) as total_flights,
+            ROUND((1.0 - AVG(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END)), 3) as otp_pct
+        FROM flights 
+        WHERE strftime('%Y', flight_date) = :year
+        GROUP BY uniquecarrier 
+        HAVING total_flights >= 5000
+        ORDER BY otp_pct DESC
+        LIMIT 10
+    """), {"year": str(year)}).fetchall()
+
+    return [
+        {
+            "carrier": r.uniquecarrier,
+            "otp_pct": float(r.otp_pct),
+            "total_flights": int(r.total_flights),
+            "delay_rate": round(1 - float(r.otp_pct), 3)
+        }
+        for r in result
+    ]
+
+
+@router.get("/monthly-trends")
+def monthly_trends(year: int = 2024, db: Session = Depends(get_db)):
+    result = db.execute(text("""
+        SELECT 
+            strftime('%m-%Y', flight_date) as period,
+            strftime('%m', flight_date) as month_num,
+            COUNT(*) as flights,
+            ROUND(AVG(COALESCE(arr_delay_minutes, 0)), 1) as avg_delay,
+            ROUND(AVG(CASE WHEN arr_del_15 = 1 THEN 1.0 ELSE 0 END), 3) as delay_rate,
+            ROUND(AVG(cancelled*1.0), 3) as cancel_rate
+        FROM flights
+        WHERE strftime('%Y', flight_date) = :year
+        GROUP BY 1 ORDER BY month_num
+    """), {"year": str(year)}).fetchall()
+
+    return [{"period": r.period, "flights": int(r.flights), "avg_delay": float(r.avg_delay),
+             "delay_rate": float(r.delay_rate), "cancel_rate": float(r.cancel_rate)} for r in result]
