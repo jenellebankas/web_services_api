@@ -1,22 +1,28 @@
 # app/api/v1/routers/analytics.py
-from app.schemas import DisruptionScoreResponse, YearOverYearResponse
+from app.schemas import DisruptionScoreResponse
+from app.schemas import YearOverYearResponse
+from app.schemas import AirportComparisonResponse
+from app.schemas import AirportComparisonItem
+from app.schemas import AirportDelaysResponse
+from app.schemas import HourlyPatternItem
+from app.schemas import DailyPatternResponse
+from app.schemas import WeeklyPatternItem
+from app.schemas import WeeklyPatternResponse
+from app.schemas import LeaderboardItem
+from app.schemas import PunctualityLeaderboardResponse
+from app.schemas import BestTimeItem
+from app.schemas import BestTimeResponse
+from app.schemas import RouteRiskItem
+from app.schemas import RouteRiskResponse
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from pydantic import BaseModel
 
+from typing import List
 from app.api.v1.deps import get_db
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
-
-
-class AirportDelaysResponse(BaseModel):
-    airport: str
-    total_flights: int
-    avg_arrival_delay: float
-    delay_rate: float
-    cancel_rate: float
-    worst_day: str
 
 
 @router.get("/airport-delays/{airport}", response_model=AirportDelaysResponse)
@@ -165,3 +171,347 @@ def get_year_over_year(airport: str, db: Session = Depends(get_db)):
         improvement_pct=round(improvement_pct, 1),
     )
 
+
+@router.get("/compare-airports", response_model=AirportComparisonResponse)
+def compare_airports(
+    airports: str,
+    year: int = 2024,
+    db: Session = Depends(get_db),
+):
+    airport_list = [a.strip().upper() for a in airports.split(",") if a.strip()]
+
+    if not airport_list:
+        raise HTTPException(status_code=400, detail="No airports provided")
+
+    placeholders = ",".join([f":a{i}" for i in range(len(airport_list))])
+    params = {f"a{i}": code for i, code in enumerate(airport_list)}
+    params["year"] = str(year)
+
+    result = db.execute(
+        text(f"""
+            SELECT 
+                origin AS airport,
+                COUNT(*) AS total,
+                COALESCE(AVG(arr_delay_minutes), 0) AS avg_delay,
+                SUM(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END) AS delayed,
+                SUM(cancelled) AS cancelled
+            FROM flights
+            WHERE origin IN ({placeholders})
+              AND strftime('%Y', flight_date) = :year
+            GROUP BY origin
+        """),
+        params
+    ).fetchall()
+
+    items: List[AirportComparisonItem] = []
+    for row in result:
+        total = row.total or 0
+        if total == 0:
+            continue
+        delay_rate = float(row.delayed or 0) / total
+        cancel_rate = float(row.cancelled or 0) / total
+        items.append(
+            AirportComparisonItem(
+                airport=row.airport,
+                total_flights=int(total),
+                avg_arrival_delay=round(float(row.avg_delay or 0), 1),
+                delay_rate=round(delay_rate, 3),
+                cancel_rate=round(cancel_rate, 3),
+            )
+        )
+
+    if not items:
+        raise HTTPException(status_code=404, detail="No data for given airports/year")
+
+    return AirportComparisonResponse(year=year, airports=items)
+
+
+@router.get("/daily-pattern/{airport}", response_model=DailyPatternResponse)
+def daily_pattern(
+    airport: str,
+    year: int = 2024,
+    db: Session = Depends(get_db),
+):
+    result = db.execute(
+        text("""
+            SELECT 
+                CAST(strftime('%H', dep_time) AS INTEGER) AS hour,
+                COUNT(*) AS total,
+                COALESCE(AVG(dep_delay_minutes), 0) AS avg_dep_delay,
+                SUM(CASE WHEN dep_del_15 = 1 THEN 1 ELSE 0 END) AS delayed
+            FROM flights
+            WHERE origin = :airport
+              AND dep_time IS NOT NULL
+              AND strftime('%Y', flight_date) = :year
+            GROUP BY hour
+            ORDER BY hour
+        """),
+        {"airport": airport, "year": str(year)}
+    ).fetchall()
+
+    hours: List[HourlyPatternItem] = []
+    for row in result:
+        total = row.total or 0
+        if total == 0 or row.hour is None:
+            continue
+        delay_rate = float(row.delayed or 0) / total
+        hours.append(
+            HourlyPatternItem(
+                hour=int(row.hour),
+                avg_dep_delay=round(float(row.avg_dep_delay or 0), 1),
+                delay_rate=round(delay_rate, 3),
+            )
+        )
+
+    if not hours:
+        raise HTTPException(status_code=404, detail="No pattern data for this airport/year")
+
+    return DailyPatternResponse(airport=airport.upper(), year=year, hours=hours)
+
+
+DOW_MAP = {
+    0: "Sun",
+    1: "Mon",
+    2: "Tue",
+    3: "Wed",
+    4: "Thu",
+    5: "Fri",
+    6: "Sat",
+}
+
+
+@router.get("/weekly-pattern/{airport}", response_model=WeeklyPatternResponse)
+def weekly_pattern(
+    airport: str,
+    year: int = 2024,
+    db: Session = Depends(get_db),
+):
+    result = db.execute(
+        text("""
+            SELECT 
+                CAST(strftime('%w', flight_date) AS INTEGER) AS dow,
+                COUNT(*) AS total,
+                COALESCE(AVG(arr_delay_minutes), 0) AS avg_arr_delay,
+                SUM(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END) AS delayed,
+                SUM(cancelled) AS cancelled
+            FROM flights
+            WHERE origin = :airport
+              AND strftime('%Y', flight_date) = :year
+            GROUP BY dow
+            ORDER BY dow
+        """),
+        {"airport": airport, "year": str(year)}
+    ).fetchall()
+
+    days: List[WeeklyPatternItem] = []
+    for row in result:
+        total = row.total or 0
+        if total == 0 or row.dow is None:
+            continue
+        delay_rate = float(row.delayed or 0) / total
+        cancel_rate = float(row.cancelled or 0) / total
+        label = DOW_MAP.get(int(row.dow), str(row.dow))
+        days.append(
+            WeeklyPatternItem(
+                dow=label,
+                avg_arr_delay=round(float(row.avg_arr_delay or 0), 1),
+                delay_rate=round(delay_rate, 3),
+                cancel_rate=round(cancel_rate, 3),
+            )
+        )
+
+    if not days:
+        raise HTTPException(status_code=404, detail="No weekly data for this airport/year")
+
+    return WeeklyPatternResponse(airport=airport.upper(), year=year, days=days)
+
+
+@router.get(
+    "/leaderboard/punctuality",
+    response_model=PunctualityLeaderboardResponse,
+)
+def punctuality_leaderboard(
+    year: int = 2024,
+    limit: int = 10,
+    min_flights: int = 1000,
+    db: Session = Depends(get_db),
+):
+    # aggregate per origin
+    rows = db.execute(
+        text("""
+            SELECT
+                origin AS airport,
+                COUNT(*) AS total_flights,
+                SUM(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END) AS delayed_flights
+            FROM flights
+            WHERE strftime('%Y', flight_date) = :year
+            GROUP BY origin
+        """),
+        {"year": str(year)},
+    ).mappings().all()
+
+    items: List[LeaderboardItem] = []
+    for row in rows:
+        total = int(row["total_flights"] or 0)
+        if total < min_flights:
+            continue  # ignore tiny airports/noise
+        delayed = int(row["delayed_flights"] or 0)
+        delay_rate = delayed / total
+        otp = 1.0 - delay_rate
+        items.append(
+            LeaderboardItem(
+                airport=row["airport"],
+                otp_pct=round(otp, 3),
+                delay_rate=round(delay_rate, 3),
+                total_flights=total,
+            )
+        )
+
+    if not items:
+        raise HTTPException(status_code=404, detail="No airports meet criteria for this year")
+
+    items_sorted = sorted(items, key=lambda x: x.otp_pct, reverse=True)
+    top = items_sorted[:limit]
+    bottom = list(reversed(items_sorted))[:limit]
+
+    return PunctualityLeaderboardResponse(
+        year=year,
+        top_airports=top,
+        bottom_airports=bottom,
+    )
+
+
+@router.get("/best-time/{airport}", response_model=BestTimeResponse)
+def best_time_to_fly(
+        airport: str,
+        year: int = 2024,
+        top_n: int = 3,
+        db: Session = Depends(get_db),
+):
+    # Get hourly patterns (same SQL as daily-pattern but with counts)
+    result = db.execute(
+        text("""
+            SELECT 
+                CAST(strftime('%H', dep_time) AS INTEGER) AS hour,
+                COUNT(*) AS total_flights,
+                COALESCE(AVG(dep_delay_minutes), 0) AS avg_dep_delay,
+                SUM(CASE WHEN dep_del_15 = 1 THEN 1 ELSE 0 END)*1.0 / COUNT(*) AS delay_rate
+            FROM flights
+            WHERE origin = :airport
+              AND dep_time IS NOT NULL
+              AND strftime('%Y', flight_date) = :year
+            GROUP BY hour
+            HAVING total_flights >= 50  -- minimum sample size
+            ORDER BY hour
+        """),
+        {"airport": airport, "year": str(year)}
+    ).fetchall()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="No sufficient data for this airport/year")
+
+    # Convert to list and sort by delay_rate (best = lowest)
+    hours: List[BestTimeItem] = []
+    for row in result:
+        if row.total_flights < 50:  # safety check
+            continue
+        hours.append(
+            BestTimeItem(
+                hour=int(row.hour),
+                avg_dep_delay=round(float(row.avg_dep_delay), 1),
+                delay_rate=round(float(row.delay_rate), 3),
+                total_flights=int(row.total_flights),
+            )
+        )
+
+    if len(hours) < 2:
+        raise HTTPException(status_code=404, detail="Insufficient hourly data")
+
+    # Sort by delay_rate (ascending = best)
+    sorted_hours = sorted(hours, key=lambda x: x.delay_rate)
+
+    best = sorted_hours[:top_n]
+    worst = sorted_hours[-top_n:]
+
+    # Generate insight
+    best_rate = best[0].delay_rate if best else 0
+    worst_rate = worst[0].delay_rate if worst else 0
+    improvement = ((worst_rate - best_rate) / worst_rate * 100) if worst_rate > 0 else 0
+
+    insight = f"Flying at {best[0].hour}:00 gives {best[0].delay_rate:.1%} delay risk vs {worst[0].delay_rate:.1%} at {worst[0].hour}:00 ({improvement:.0f}% better)."
+
+    return BestTimeResponse(
+        airport=airport.upper(),
+        year=year,
+        best_hours=best,
+        worst_hours=worst,
+        insight=insight,
+    )
+
+
+@router.get("/route-risk", response_model=RouteRiskResponse)
+def route_risk_score(
+        origin: str,
+        destinations: str,  # comma-separated: "JFK,ORD,LAS"
+        year: int = 2024,
+        db: Session = Depends(get_db),
+):
+    dest_list = [d.strip().upper() for d in destinations.split(",") if d.strip()]
+
+    if len(dest_list) < 2 or len(dest_list) > 10:
+        raise HTTPException(status_code=400, detail="Provide 2-10 destinations (comma-separated)")
+
+    placeholders = ",".join([f":d{i}" for i in range(len(dest_list))])
+    params = {f"d{i}": dest for i, dest in enumerate(dest_list)}
+    params.update({"origin": origin.upper(), "year": str(year)})
+
+    result = db.execute(
+        text(f"""
+            SELECT 
+                dest AS dest,
+                COUNT(*) AS total_flights,
+                COALESCE(AVG(arr_delay_minutes), 0) AS avg_arr_delay,
+                SUM(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END)*1.0 / COUNT(*) AS delay_rate,
+                SUM(cancelled)*1.0 / COUNT(*) AS cancel_rate
+            FROM flights
+            WHERE origin = :origin 
+              AND dest IN ({placeholders})
+              AND strftime('%Y', flight_date) = :year
+            GROUP BY dest
+            HAVING total_flights >= 10
+        """),
+        params
+    ).fetchall()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="No route data found")
+
+    routes: List[RouteRiskItem] = []
+    for row in result:
+        # Risk formula: delay_rate (40%) + avg_delay (30%) + cancel_rate (30%)
+        # Normalized to 0-100 scale
+        delay_component = float(row.delay_rate or 0) * 40
+        delay_minutes_component = min(float(row.avg_arr_delay or 0) / 30, 1) * 30  # cap at 30min
+        cancel_component = float(row.cancel_rate or 0) * 3000  # cancellations hurt more
+        risk_score = round(delay_component + delay_minutes_component + cancel_component, 1)
+
+        routes.append(
+            RouteRiskItem(
+                dest=row.dest,
+                risk_score=risk_score,
+                delay_rate=round(float(row.delay_rate or 0), 3),
+                avg_arr_delay=round(float(row.avg_arr_delay or 0), 1),
+                cancel_rate=round(float(row.cancel_rate or 0), 3),
+                total_flights=int(row.total_flights),
+            )
+        )
+
+    routes.sort(key=lambda x: x.risk_score)
+
+    return RouteRiskResponse(
+        origin=origin.upper(),
+        year=year,
+        safest_route=f"{origin}→{routes[0].dest}",
+        riskiest_route=f"{origin}→{routes[-1].dest}",
+        routes=routes,
+    )

@@ -1,6 +1,6 @@
 # app/schemas.py
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from datetime import date, datetime
 
 
@@ -101,3 +101,100 @@ class YearOverYearResponse(BaseModel):
     improvement_pct: float
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AirportComparisonItem(BaseModel):
+    airport: str
+    total_flights: int
+    avg_arrival_delay: float
+    delay_rate: float
+    cancel_rate: float
+
+
+class AirportComparisonResponse(BaseModel):
+    year: int
+    airports: List[AirportComparisonItem]
+
+
+class HourlyPatternItem(BaseModel):
+    hour: int  # 0–23
+    avg_dep_delay: float
+    delay_rate: float
+
+
+class DailyPatternResponse(BaseModel):
+    airport: str
+    year: int
+    hours: List[HourlyPatternItem]
+
+
+class WeeklyPatternItem(BaseModel):
+    dow: str  # "Mon", "Tue", etc.
+    avg_arr_delay: float
+    delay_rate: float
+    cancel_rate: float
+
+
+class WeeklyPatternResponse(BaseModel):
+    airport: str
+    year: int
+    days: List[WeeklyPatternItem]
+
+
+class DelayCauseItem(BaseModel):
+    cause: str
+    delay_minutes: int
+    pct_of_total: float
+
+
+class DelayCauseBreakdownResponse(BaseModel):
+    airport: str
+    year: int
+    total_delayed_flights: int
+    total_delay_minutes: int
+    causes: List[DelayCauseItem]
+
+
+class LeaderboardItem(BaseModel):
+    airport: str
+    otp_pct: float
+    delay_rate: float
+    total_flights: int
+
+
+class PunctualityLeaderboardResponse(BaseModel):
+    year: int
+    top_airports: List[LeaderboardItem]
+    bottom_airports: List[LeaderboardItem]
+
+
+class BestTimeItem(BaseModel):
+    hour: int  # 0-23 (military time)
+    avg_dep_delay: float
+    delay_rate: float
+    total_flights: int
+
+
+class BestTimeResponse(BaseModel):
+    airport: str
+    year: int
+    best_hours: List[BestTimeItem]
+    worst_hours: List[BestTimeItem]
+    insight: str
+
+
+class RouteRiskItem(BaseModel):
+    dest: str
+    risk_score: float
+    delay_rate: float
+    avg_arr_delay: float
+    cancel_rate: float
+    total_flights: int
+
+
+class RouteRiskResponse(BaseModel):
+    origin: str
+    year: int
+    safest_route: str
+    riskiest_route: str
+    routes: List[RouteRiskItem]
