@@ -211,8 +211,6 @@ datasets/
 datasets/*.csv
 datasets/flights_2023.csv
 datasets/flights_2024.csv
-datasets/airports_2023.csv
-datasets/airports_2024.csv
 
 # env stuff
 .venv/
