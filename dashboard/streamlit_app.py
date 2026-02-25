@@ -1,7 +1,7 @@
 import streamlit as st
 from components import api
 from components import metrics
-import plotly as px
+import plotly.express as px
 import pandas as pd
 
 
@@ -182,7 +182,6 @@ monthly_data = api.fetch("monthly-trends", {"year": year})
 if monthly_data:
     df_monthly = pd.DataFrame(monthly_data)
 
-    # Fixed column name (period instead of month)
     fig = px.line(df_monthly, x="period", y=["delay_rate", "cancel_rate"],
                   title=f"Disruption Trends {year}",
                   color_discrete_sequence=["#68a368", "#a8d0a8"],
