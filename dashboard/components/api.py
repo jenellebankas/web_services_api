@@ -1,6 +1,7 @@
 import requests
 import streamlit as st
-from ..config import API_BASE_URL
+
+API_BASE_URL = "https://web-services-api.onrender.com/api/v1/analytics"
 
 
 @st.cache_data(ttl=300)

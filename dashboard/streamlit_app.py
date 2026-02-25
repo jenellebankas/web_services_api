@@ -1,9 +1,19 @@
 import streamlit as st
 from components.api import fetch
 from components.metrics import metric_card
-from config import DARK_THEME
 import plotly as px
 import pandas as pd
+
+
+DARK_THEME = {
+    "primary": "#2d5a2d",
+    "secondary": "#4a7c4a",
+    "accent": "#68a368",
+    "bg": "#1a1f1a",
+    "card": "#252a25",
+    "text": "#e8f0e8",
+    "text_secondary": "#b8c9b8"
+}
 
 st.set_page_config(page_title="Flight Analytics", page_icon="✈️", layout="wide")
 
