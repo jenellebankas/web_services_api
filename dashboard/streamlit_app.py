@@ -7,7 +7,7 @@ import plotly.express as px
 # -----------------------
 # CONFIGURATION
 # -----------------------
-API_BASE_URL = "https://web-services-api.onrender.com/"
+API_BASE_URL = "https://web-services-api.onrender.com"
 
 st.set_page_config(
     page_title="Flight Disruption Analytics",
