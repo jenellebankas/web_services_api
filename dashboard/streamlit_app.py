@@ -41,7 +41,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patte
 
 with tab1:
     st.markdown("## Punctuality Leaderboard")
-    year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed")
+    year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="main_year")
 
     data = api.fetch("leaderboard/punctuality", {"year": year})
     if data:
@@ -56,7 +56,8 @@ with tab1:
 
 with tab2:
     st.markdown("## Airport Delays")
-    airport = st.text_input("Airport", "JFK").upper()
+    airport = st.text_input("Airport", "JFK", key="airport_analysis").upper()
+
     if airport:
         data = api.fetch(f"airport-delays/{airport}")
         if data:
@@ -70,12 +71,17 @@ with tab3:
     pattern_col1, pattern_col2 = st.columns(2)
     with pattern_col1:
         st.markdown("### Daily Pattern")
-        airport = st.text_input("Airport", "JFK").upper()
+        airport_daily = st.text_input("Airport", "JFK", key="daily_pattern_airport").upper()
+
         if airport:
             st.dataframe(api.fetch(f"daily-pattern/{airport}"))
+
     with pattern_col2:
         st.markdown("### Weekly Pattern")
-        st.dataframe(api.fetch("weekly-pattern/JFK"))
+        airport_weekly = st.text_input("Airport", "JFK", key="weekly_pattern_airport").upper()
+
+        if airport_weekly:
+            st.dataframe(api.fetch(f"weekly-pattern/{airport_weekly}"))
 
 with tab4:
     st.markdown("## Route Analysis & Best Times")
@@ -86,8 +92,8 @@ with tab4:
     # LEFT: Best Time to Fly
     with col1:
         st.markdown("### Best Time to Fly")
-        year = st.selectbox("Year", [2023, 2024], index=1, key="best_time_year")
-        airport = st.text_input("Airport", "JFK", key="best_time_airport").upper().strip()
+        year_best = st.selectbox("Year", [2023, 2024], index=1, key="best_time_year")
+        airport_best = st.text_input("Airport", "JFK", key="best_time_airport").upper()
 
         if airport:
             best_data = api.fetch(f"best-time/{airport}", {"year": year})
@@ -108,11 +114,10 @@ with tab4:
 
     # RIGHT: Route Risk Analysis
     with col2:
-        st.markdown("### Route Risk Scores")
-        year = st.selectbox("Year", [2023, 2024], index=1, key="route_year")
-        origin = st.text_input("Origin", "JFK", key="route_origin").upper().strip()
-        destinations = st.text_input("Destinations", "LAX,ORD,ATL,DEN",
-                                     help="Comma-separated e.g. LAX,ORD,ATL").upper().strip()
+        st.markdown("### Route Risk")
+        year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
+        origin = st.text_input("Origin", "JFK", key="route_origin").upper()
+        destinations = st.text_input("Destinations", "LAX,ORD,ATL", key="route_destinations")
 
         if origin and destinations:
             route_data = api.fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year})
@@ -126,8 +131,7 @@ with tab4:
     # Row 2: Year-over-Year Airport Comparison
     st.markdown("---")
     st.markdown("### Compare Airport Performance")
-    airports_input = st.text_input("Airports", "JFK,LAX,ORD,ATL",
-                                   help="Comma-separated airport codes").upper().strip()
+    airports_input = st.text_input("Airports", "JFK,LAX,ORD", key="compare_airports")
     compare_year = st.selectbox("Year", [2023, 2024], index=1, key="compare_year")
 
     if airports_input:
