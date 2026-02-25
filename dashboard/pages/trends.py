@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from dashboard.components import api
+from components import api
 
 st.markdown("# Year-over-Year Trends")
 airport = st.text_input("Airport Code", "JFK").upper().strip()

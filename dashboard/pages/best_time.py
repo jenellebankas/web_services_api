@@ -1,6 +1,6 @@
 import streamlit as st
 import plotly.express as px
-from dashboard.components import api
+from components import api
 
 
 st.markdown("# Best Time to Fly")
