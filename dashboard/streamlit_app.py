@@ -96,7 +96,6 @@ def display_metric(title: str, value: str, col):
 # HEADER & SIDEBAR
 # -----------------------
 st.title("Flight Disruption Analytics")
-st.markdown("Dark mode dashboard for airport performance insights")
 
 with st.sidebar:
     st.markdown("### Analytics Menu")
@@ -160,5 +159,55 @@ elif view == "Daily Pattern" and airport:
                           font_color="#e8f0e8", title_font_color="#68a368")
         st.plotly_chart(fig, use_container_width=True)
 
+
+# Add this to your existing dashboard under the VIEWS section
+
+elif view == "Weekly Pattern" and airport:
+    st.markdown(f"### Weekly Patterns - {airport} ({year})")
+    data = fetch_data(f"api/v1/analytics/weekly-pattern/{airport}", {"year": year})
+    if data:
+        df = pd.DataFrame(data["days"])
+
+        # Convert delay rates to percentages for display
+        df['delay_rate_pct'] = df['delay_rate'] * 100
+        df['cancel_rate_pct'] = df['cancel_rate'] * 100
+
+        # Create dual-axis bar chart
+        fig = px.bar(df, x="dow", y=["delay_rate_pct", "cancel_rate_pct"],
+                     title=f"Delay & Cancel Rates by Day of Week - {airport}",
+                     barmode="group",
+                     color_discrete_sequence=["#68a368", "#a8d0a8"],
+                     labels={'value': 'Rate (%)', 'dow': 'Day of Week'})
+
+        # Dark mode styling
+        fig.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font_color="#e8f0e8",
+            title_font_color="#68a368",
+            legend=dict(
+                bgcolor='rgba(37,42,37,0.8)',
+                bordercolor="#4a7c4a",
+                borderwidth=1
+            )
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Summary metrics
+        col1, col2, col3 = st.columns(3)
+        worst_day = df.loc[df['delay_rate_pct'].idxmax()]
+        best_day = df.loc[df['delay_rate_pct'].idxmin()]
+
+        with col1:
+            st.metric("Worst Day (Delays)",
+                      f"{worst_day['dow']} ({worst_day['delay_rate_pct']:.1f}%)")
+        with col2:
+            st.metric("Best Day (Delays)",
+                      f"{best_day['dow']} ({best_day['delay_rate_pct']:.1f}%)")
+        with col3:
+            st.metric("Weekly Avg Delay",
+                      f"{df['delay_rate_pct'].mean():.1f}%")
+
+
 st.markdown("---")
-st.markdown("*Dark mode dashboard powered by FastAPI analytics*")
