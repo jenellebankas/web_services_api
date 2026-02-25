@@ -125,7 +125,7 @@ with tab4:
                 st.success(f"**Safest:** {route_data['safest_route']} | **Riskiest:** {route_data['riskiest_route']}")
 
                 # Top 3 safest routes
-                df_routes = pd.DataFrame(route_data["routes"].head(3))
+                df_routes = pd.DataFrame(route_data["routes"][:3])
                 st.dataframe(df_routes[['dest', 'risk_score', 'delay_rate']], use_container_width=True)
 
     # Row 2: Year-over-Year Airport Comparison
