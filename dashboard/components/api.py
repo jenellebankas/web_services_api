@@ -1,6 +1,6 @@
 import requests
 import streamlit as st
-from dashboard.config import API_BASE_URL
+from ..config import API_BASE_URL
 
 
 @st.cache_data(ttl=300)
