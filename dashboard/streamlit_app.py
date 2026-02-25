@@ -16,71 +16,48 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Subdued Green Theme (Much softer and professional)
+# Dark Forest Green Theme
 st.markdown("""
     <style>
-        /* Muted green professional theme */
         :root {
-            --primary-color: #4a7043;      /* Forest green - professional */
-            --secondary-color: #a8c4a8;     /* Light sage */
-            --accent-color: #6b8e6b;        /* Sage green */
-            --background-color: #f8faf8;    /* Off-white */
-            --sidebar-bg: #f0f4f0;         /* Very light green tint */
-            --card-bg: #ffffff;
-            --text-dark: #2d3a2a;
-            --text-light: #5a6a58;
+            --primary-color: #2d5a2d;
+            --secondary-color: #4a7c4a;
+            --accent-color: #68a368;
+            --background-color: #1a1f1a;
+            --surface-color: #212622;
+            --card-bg: #252a25;
+            --sidebar-bg: #1f2421;
+            --text-primary: #e8f0e8;
+            --text-secondary: #b8c9b8;
         }
 
-        body {
+        .main .block-container {
             background-color: var(--background-color);
-            color: var(--text-dark);
+            padding-top: 1rem;
         }
 
-        [data-testid="stSidebar"] {
+        body { background-color: var(--background-color); color: var(--text-primary); }
+        [data-testid="stSidebar"] { 
             background-color: var(--sidebar-bg);
-            border-right: 1px solid var(--accent-color);
+            border-right: 1px solid var(--secondary-color);
         }
-
-        h1, h2, h3 {
-            color: var(--primary-color) !important;
-            font-weight: 600;
-        }
-
-        .stMetric > label {
-            color: var(--text-light) !important;
-        }
+        h1, h2, h3 { color: var(--accent-color) !important; font-weight: 500; }
 
         .metric-container {
-            background-color: var(--card-bg);
+            background: linear-gradient(135deg, var(--card-bg) 0%, #2a332a 100%);
+            border: 1px solid var(--secondary-color);
             border-radius: 12px;
             padding: 20px;
-            box-shadow: 0 2px 8px rgba(74, 112, 67, 0.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             border-left: 4px solid var(--accent-color);
             margin: 10px 0;
         }
 
         .stPlotlyChart {
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        /* Success messages */
-        .stAlert > div {
-            border-radius: 8px;
-            border-left: 4px solid var(--accent-color);
-        }
-
-        /* Button styling */
-        .stButton > button {
-            background-color: var(--primary-color);
-            border-radius: 8px;
-            border: none;
-            color: white;
-            font-weight: 500;
-        }
-
-        .stButton > button:hover {
-            background-color: var(--accent-color);
+            border-radius: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--secondary-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
     </style>
 """, unsafe_allow_html=True)
@@ -89,148 +66,100 @@ st.markdown("""
 # -----------------------
 # HELPER FUNCTIONS
 # -----------------------
-@st.cache_data(ttl=300)  # Cache for 5 minutes
+@st.cache_data(ttl=300)
 def fetch_data(endpoint: str, params=None):
-    """Safely fetch JSON data from API."""
     try:
         url = f"{API_BASE_URL}/{endpoint}"
         response = requests.get(url, params=params, timeout=10)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            st.error(f"Error {response.status_code}: {response.text}")
-            return None
+        response.raise_for_status()
+        return response.json()
     except Exception as e:
-        st.error(f"Connection error: {e}")
+        st.error(f"API Error: {e}")
         return None
 
 
 # -----------------------
-# HEADER
+# METRIC DISPLAY FUNCTION (Fixed)
 # -----------------------
-st.title("✈️ Flight Disruption Analytics")
-st.markdown("**Professional insights into airport performance & delay patterns**")
+def display_metric(title: str, value: str, col):
+    """Display metric in styled card - FIXED version"""
+    html = f"""
+    <div class="metric-container">
+        <h4 style='color: var(--text-secondary); margin: 0 0 8px 0;'>{title}</h4>
+        <h1 style='color: var(--accent-color); margin: 0; font-size: 2.5rem;'>{value}</h1>
+    </div>
+    """
+    col.markdown(html, unsafe_allow_html=True)
+
 
 # -----------------------
-# SIDEBAR MENU
+# HEADER & SIDEBAR
 # -----------------------
+st.title("Flight Disruption Analytics")
+st.markdown("Dark mode dashboard for airport performance insights")
+
 with st.sidebar:
-    st.markdown("### 📊 Analytics Dashboard")
-    st.markdown("---")
+    st.markdown("### Analytics Menu")
+    st.markdown("─" * 30)
 
-    view = st.radio(
-        "Select insight:",
-        [
-            "Airport Delays Overview",
-            "Year-over-Year Trends",
-            "Daily Pattern",
-            "Weekly Pattern",
-            "Punctuality Leaderboard",
-            "Best Time to Fly",
-            "Route Risk",
-        ],
-        index=0
-    )
+    view = st.radio("Select view:", [
+        "Airport Delays", "Year-over-Year", "Daily Pattern",
+        "Weekly Pattern", "Leaderboard", "Best Time", "Route Risk"
+    ], index=0)
 
-    st.markdown("---")
-    year = st.selectbox("📅 Year", [2023, 2024], index=1)
-    airport = st.text_input("🛫 Airport code", "JFK", help="e.g., JFK, LAX, ORD").upper().strip()
+    st.markdown("─" * 30)
+    year = st.selectbox("Year", [2023, 2024], index=1)
+    airport = st.text_input("Airport", "JFK", help="e.g., JFK, LAX, ORD").upper().strip()
 
-    st.markdown("---")
-    st.info("💡 Connects to your FastAPI analytics endpoints")
+    if st.button("Refresh Data"):
+        st.cache_data.clear()
+        st.rerun()
 
 # -----------------------
-# VIEW: AIRPORT DELAYS
+# VIEWS
 # -----------------------
-if view == "Airport Delays Overview" and airport:
-    st.markdown(f"### 🛬 Delay Summary - {airport}")
+if view == "Airport Delays" and airport:
+    st.markdown(f"### Delay Summary - {airport}")
     data = fetch_data(f"airport-delays/{airport}")
     if data:
         col1, col2, col3, col4 = st.columns(4)
 
-        with col1:
-            st.markdown("""
-            <div class="metric-container">
-                <h3 style='color: var(--primary-color); margin: 0;'>Total Flights</h3>
-                <h1 style='color: var(--text-dark); margin: 10px 0 0 0;'>{}</h1>
-            </div>
-            """.format(data["total_flights"]), unsafe_allow_html=True)
+        # FIXED: Proper string formatting before HTML
+        display_metric("Total Flights", f"{data['total_flights']:,}", col1)
+        display_metric("Avg Delay", f"{data['avg_arrival_delay']:.1f} min", col2)
+        display_metric("Delay Rate", f"{data['delay_rate'] * 100:.1f}%", col3)
+        display_metric("Cancel Rate", f"{data['cancel_rate'] * 100:.1f}%", col4)
 
-        with col2:
-            st.markdown("""
-            <div class="metric-container">
-                <h3 style='color: var(--primary-color); margin: 0;'>Avg Delay</h3>
-                <h1 style='color: var(--text-dark); margin: 10px 0 0 0;'>{:.1f} min</h1>
-            </div>
-            """.format(data["avg_arrival_delay"]), unsafe_allow_html=True)
+        st.success(f"Most disrupted day: {data['worst_day']}")
 
-        with col3:
-            st.markdown("""
-            <div class="metric-container">
-                <h3 style='color: var(--primary-color); margin: 0;'>Delay Rate</h3>
-                <h1 style='color: var(--text-dark); margin: 10px 0 0 0;'>{:.1f}%</h1>
-            </div>
-            """.format(data['delay_rate'] * 100), unsafe_allow_html=True)
-
-        with col4:
-            st.markdown("""
-            <div class="metric-container">
-                <h3 style='color: var(--primary-color); margin: 0;'>Cancel Rate</h3>
-                <h1 style='color: var(--text-dark); margin: 10px 0 0 0;'>{:.1f}%</h1>
-            </div>
-            """.format(data['cancel_rate'] * 100), unsafe_allow_html=True)
-
-        st.success(f"**Most disrupted day:** {data['worst_day']}")
-
-# -----------------------
-# VIEW: YEAR-OVER-YEAR
-# -----------------------
-elif view == "Year-over-Year Trends" and airport:
-    st.markdown(f"### 📈 Year-over-Year - {airport}")
+elif view == "Year-over-Year" and airport:
+    st.markdown(f"### Trends - {airport}")
     data = fetch_data(f"year-over-year/{airport}")
     if data:
         df = pd.DataFrame({
             "Year": ["2023", "2024"],
-            "Avg Delay (min)": [
-                data["year_2023"]["avg_arrival_delay"],
-                data["year_2024"]["avg_arrival_delay"],
-            ],
-            "Delay Rate (%)": [
-                data["year_2023"]["delay_rate"] * 100,
-                data["year_2024"]["delay_rate"] * 100,
-            ],
+            "Avg Delay": [data["year_2023"]["avg_arrival_delay"], data["year_2024"]["avg_arrival_delay"]],
+            "Delay Rate (%)": [data["year_2023"]["delay_rate"] * 100, data["year_2024"]["delay_rate"] * 100],
         })
 
-        fig = px.bar(df, x="Year", y=["Avg Delay (min)", "Delay Rate (%)"],
-                     barmode="group", title=f"Performance Comparison {airport}",
-                     color_discrete_sequence=["#4a7043", "#a8c4a8"])
-        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+        fig = px.bar(df, x="Year", y=["Avg Delay", "Delay Rate (%)"],
+                     barmode="group", title="Performance Comparison",
+                     color_discrete_sequence=["#68a368", "#a8d0a8"])
+        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                          font_color="#e8f0e8", title_font_color="#68a368")
         st.plotly_chart(fig, use_container_width=True)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Improvement (Delay Rate)", f"{data['improvement_pct']:.1f}%")
-        with col2:
-            st.info("**Positive = Better performance**")
-
-# -----------------------
-# VIEW: DAILY PATTERN
-# -----------------------
 elif view == "Daily Pattern" and airport:
-    st.markdown(f"### ⏰ Hourly Patterns - {airport} ({year})")
+    st.markdown(f"### Hourly Patterns - {airport} ({year})")
     data = fetch_data(f"daily-pattern/{airport}", {"year": year})
     if data:
-        df = pd.DataFrame([dict(hour=h['hour'], delay_rate=h['delay_rate'] * 100, avg_delay=h['avg_dep_delay'])
+        df = pd.DataFrame([dict(hour=h['hour'], delay_rate=h['delay_rate'] * 100)
                            for h in data["hours"]])
-        fig = px.line(df, x="hour", y="delay_rate",
-                      title="Delay Rate by Hour of Day",
-                      markers=True, color_discrete_sequence=["#4a7043"])
-        fig.update_traces(line=dict(color="#4a7043", width=3))
-        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+        fig = px.line(df, x="hour", y="delay_rate", title="Delay Rate by Hour",
+                      markers=True, color_discrete_sequence=["#68a368"])
+        fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                          font_color="#e8f0e8", title_font_color="#68a368")
         st.plotly_chart(fig, use_container_width=True)
 
-# Continue with other views using the same muted color scheme...
-# (Rest of the views follow the same pattern with the new colors)
-
 st.markdown("---")
-st.markdown("*Powered by your FastAPI analytics API*")
+st.markdown("*Dark mode dashboard powered by FastAPI analytics*")
