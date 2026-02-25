@@ -120,11 +120,10 @@ with st.sidebar:
 # -----------------------
 if view == "Airport Delays" and airport:
     st.markdown(f"### Delay Summary - {airport}")
-    data = fetch_data(f"airport-delays/{airport}")
+    data = fetch_data(f"api/v1/analytics/airport-delays/{airport}")
     if data:
         col1, col2, col3, col4 = st.columns(4)
 
-        # FIXED: Proper string formatting before HTML
         display_metric("Total Flights", f"{data['total_flights']:,}", col1)
         display_metric("Avg Delay", f"{data['avg_arrival_delay']:.1f} min", col2)
         display_metric("Delay Rate", f"{data['delay_rate'] * 100:.1f}%", col3)
@@ -134,7 +133,7 @@ if view == "Airport Delays" and airport:
 
 elif view == "Year-over-Year" and airport:
     st.markdown(f"### Trends - {airport}")
-    data = fetch_data(f"year-over-year/{airport}")
+    data = fetch_data(f"api/v1/analytics/year-over-year/{airport}")
     if data:
         df = pd.DataFrame({
             "Year": ["2023", "2024"],
@@ -151,7 +150,7 @@ elif view == "Year-over-Year" and airport:
 
 elif view == "Daily Pattern" and airport:
     st.markdown(f"### Hourly Patterns - {airport} ({year})")
-    data = fetch_data(f"daily-pattern/{airport}", {"year": year})
+    data = fetch_data(f"api/v1/analytics/daily-pattern/{airport}", {"year": year})
     if data:
         df = pd.DataFrame([dict(hour=h['hour'], delay_rate=h['delay_rate'] * 100)
                            for h in data["hours"]])
