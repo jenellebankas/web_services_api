@@ -1,6 +1,6 @@
 import streamlit as st
-from components.api import fetch
-from components.metrics import metric_card
+from components import api
+from components import metrics
 import plotly as px
 import pandas as pd
 
@@ -43,7 +43,7 @@ with tab1:
     st.markdown("## Punctuality Leaderboard")
     year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed")
 
-    data = fetch("leaderboard/punctuality", {"year": year})
+    data = api.fetch("leaderboard/punctuality", {"year": year})
     if data:
         col1, col2 = st.columns(2)
         with col1:
@@ -58,13 +58,13 @@ with tab2:
     st.markdown("## Airport Delays")
     airport = st.text_input("Airport", "JFK").upper()
     if airport:
-        data = fetch(f"airport-delays/{airport}")
+        data = api.fetch(f"airport-delays/{airport}")
         if data:
             col1, col2, col3, col4 = st.columns(4)
-            metric_card("Total Flights", f"{data['total_flights']:,}", col1)
-            metric_card("Avg Delay", f"{data['avg_arrival_delay']:.1f}min", col2)
-            metric_card("Delay Rate", f"{data['delay_rate'] * 100:.1f}%", col3)
-            metric_card("Cancel Rate", f"{data['cancel_rate'] * 100:.1f}%", col4)
+            metrics.metric_card("Total Flights", f"{data['total_flights']:,}", col1)
+            metrics.metric_card("Avg Delay", f"{data['avg_arrival_delay']:.1f}min", col2)
+            metrics.metric_card("Delay Rate", f"{data['delay_rate'] * 100:.1f}%", col3)
+            metrics.metric_card("Cancel Rate", f"{data['cancel_rate'] * 100:.1f}%", col4)
 
 with tab3:
     pattern_col1, pattern_col2 = st.columns(2)
@@ -72,10 +72,10 @@ with tab3:
         st.markdown("### Daily Pattern")
         airport = st.text_input("Airport", "JFK").upper()
         if airport:
-            st.dataframe(fetch(f"daily-pattern/{airport}"))
+            st.dataframe(api.fetch(f"daily-pattern/{airport}"))
     with pattern_col2:
         st.markdown("### Weekly Pattern")
-        st.dataframe(fetch("weekly-pattern/JFK"))
+        st.dataframe(api.fetch("weekly-pattern/JFK"))
 
 with tab4:
     st.markdown("## Route Analysis & Best Times")
@@ -90,7 +90,7 @@ with tab4:
         airport = st.text_input("Airport", "JFK", key="best_time_airport").upper().strip()
 
         if airport:
-            best_data = fetch(f"best-time/{airport}", {"year": year})
+            best_data = api.fetch(f"best-time/{airport}", {"year": year})
             if best_data:
                 st.success(best_data["insight"])
 
@@ -115,7 +115,7 @@ with tab4:
                                      help="Comma-separated e.g. LAX,ORD,ATL").upper().strip()
 
         if origin and destinations:
-            route_data = fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year})
+            route_data = api.fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year})
             if route_data:
                 st.success(f"**Safest:** {route_data['safest_route']} | **Riskiest:** {route_data['riskiest_route']}")
 
@@ -131,7 +131,7 @@ with tab4:
     compare_year = st.selectbox("Year", [2023, 2024], index=1, key="compare_year")
 
     if airports_input:
-        compare_data = fetch("compare-airports", {
+        compare_data = api.fetch("compare-airports", {
             "airports": airports_input,
             "year": compare_year
         })
@@ -150,18 +150,18 @@ with col2:
 
 
 col1, col2, col3, col4 = st.columns(4)
-system_data = fetch("system-overview")
+system_data = api.fetch("system-overview")
 if system_data:
-    metric_card("Total Flights (US)", f"{system_data['total_flights']:,}", col1)
-    metric_card("Industry Avg Delay", f"{system_data['avg_delay_minutes']:.1f} min", col2)
-    metric_card("National Delay Rate", f"{system_data['national_delay_rate'] * 100:.1f}%", col3)
-    metric_card("Total Cancellations", f"{system_data['total_cancellations']:,}", col4)
+    metrics.metric_card("Total Flights (US)", f"{system_data['total_flights']:,}", col1)
+    metrics.metric_card("Industry Avg Delay", f"{system_data['avg_delay_minutes']:.1f} min", col2)
+    metrics.metric_card("National Delay Rate", f"{system_data['national_delay_rate'] * 100:.1f}%", col3)
+    metrics.metric_card("Total Cancellations", f"{system_data['total_cancellations']:,}", col4)
 else:
     st.warning("System overview loading...")
 
 # 2. TOP CARRIER PERFORMANCE (Network-wide) - FIXED
 st.markdown("### Carrier Performance Ranking")
-carrier_data = fetch("carrier-performance", {"year": year})  # Pass year param
+carrier_data = api.fetch("carrier-performance", {"year": year})  # Pass year param
 if carrier_data:
     df_carriers = pd.DataFrame(carrier_data)
     st.dataframe(
@@ -174,7 +174,7 @@ else:
 
 
 st.markdown("### Monthly Disruption Trends")
-monthly_data = fetch("monthly-trends", {"year": year})
+monthly_data = api.fetch("monthly-trends", {"year": year})
 if monthly_data:
     df_monthly = pd.DataFrame(monthly_data)
 
