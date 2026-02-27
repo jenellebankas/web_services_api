@@ -53,7 +53,7 @@ st.markdown("**Professional dashboard for aviation performance insights**")
 
 if selected_view == "System Overview":
     # Main content tabs
-    tab1, tab2, tab3 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patterns"])
+    tab1, tab2, tab3 = st.tabs(["Leaderboard", "Carrier Performance", "Time Patterns"])
 
     with tab1:
         st.markdown("## System-Wide Analytics")
