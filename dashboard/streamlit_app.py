@@ -38,6 +38,7 @@ with st.sidebar:
     selected_view = st.radio(
         "Select analysis",
         [
+            "System Overview",
             "Single Airport Overview",
             "Route Analysis & Best Times",
         ],
@@ -52,69 +53,74 @@ st.markdown("**Professional dashboard for aviation performance insights**")
 
 # Main content tabs
 tab1, tab2, tab3 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patterns"])
-year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="main_year")
-with tab1:
-    st.markdown("## System-Wide Analytics")
 
-    col1, col2, col3, col4 = st.columns(4)
-    system_data = api.fetch("system-overview")
-    if system_data:
-        metrics.metric_card("Total Flights (US)", f"{system_data['total_flights']:,}", col1)
-        metrics.metric_card("Industry Avg Delay", f"{system_data['avg_delay_minutes']:.1f} min", col2)
-        metrics.metric_card("National Delay Rate", f"{system_data['national_delay_rate'] * 100:.1f}%", col3)
-        metrics.metric_card("Total Cancellations", f"{system_data['total_cancellations']:,}", col4)
-    else:
-        st.warning("System overview loading...")
+if selected_view == "System Overview":
 
-    st.markdown("## Punctuality Leaderboard")
+    with tab1:
+        year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="main_year")
+        st.markdown("## System-Wide Analytics")
 
-    data = api.fetch("leaderboard/punctuality", {"year": year})
-    if data:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("### Top 10 Airports")
-            pd.DataFrame(data["top_airports"]).style.background_gradient(cmap='Greens')
-            st.dataframe(pd.DataFrame(data["top_airports"]), use_container_width=True)
-        with col2:
-            st.markdown("### Bottom 10 Airports")
-            st.dataframe(pd.DataFrame(data["bottom_airports"]), use_container_width=True)
+        col1, col2, col3, col4 = st.columns(4)
+        system_data = api.fetch("system-overview")
+        if system_data:
+            metrics.metric_card("Total Flights (US)", f"{system_data['total_flights']:,}", col1)
+            metrics.metric_card("Industry Avg Delay", f"{system_data['avg_delay_minutes']:.1f} min", col2)
+            metrics.metric_card("National Delay Rate", f"{system_data['national_delay_rate'] * 100:.1f}%", col3)
+            metrics.metric_card("Total Cancellations", f"{system_data['total_cancellations']:,}", col4)
+        else:
+            st.warning("System overview loading...")
 
-with tab2:
+        st.markdown("## Punctuality Leaderboard")
 
-    # 2. TOP CARRIER PERFORMANCE (Network-wide)
-    st.markdown("### Carrier Performance Ranking")
-    carrier_data = api.fetch("carrier-performance", {"year": year})  # Pass year param
-    if carrier_data:
-        df_carriers = pd.DataFrame(carrier_data)
-        st.dataframe(
-            df_carriers.head(10).style.background_gradient(cmap='Greens', subset=['otp_pct']),
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.info("Carrier data loading...")
+        data = api.fetch("leaderboard/punctuality", {"year": year})
+        if data:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### Top 10 Airports")
+                pd.DataFrame(data["top_airports"]).style.background_gradient(cmap='Greens')
+                st.dataframe(pd.DataFrame(data["top_airports"]), use_container_width=True)
+            with col2:
+                st.markdown("### Bottom 10 Airports")
+                st.dataframe(pd.DataFrame(data["bottom_airports"]), use_container_width=True)
 
-with tab3:
+    with tab2:
+        year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="tab2_year")
 
-    st.markdown("### Monthly Disruption Trends")
-    monthly_data = api.fetch("monthly-trends", {"year": year})
-    if monthly_data:
-        df_monthly = pd.DataFrame(monthly_data)
+        # 2. TOP CARRIER PERFORMANCE (Network-wide)
+        st.markdown("### Carrier Performance Ranking")
+        carrier_data = api.fetch("carrier-performance", {"year": year})  # Pass year param
+        if carrier_data:
+            df_carriers = pd.DataFrame(carrier_data)
+            st.dataframe(
+                df_carriers.head(10).style.background_gradient(cmap='Greens', subset=['otp_pct']),
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("Carrier data loading...")
 
-        fig = px.line(df_monthly, x="period", y=["delay_rate", "cancel_rate"],
-                      title=f"Disruption Trends {year}",
-                      color_discrete_sequence=["#68a368", "#a8d0a8"],
-                      labels={'value': 'Rate', 'period': 'Month'})
+    with tab3:
+        year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="tab3_year")
 
-        fig.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font_color="#e8f0e8",
-            title_font_color="#68a368"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Monthly trends loading...")
+        st.markdown("### Monthly Disruption Trends")
+        monthly_data = api.fetch("monthly-trends", {"year": year})
+        if monthly_data:
+            df_monthly = pd.DataFrame(monthly_data)
+
+            fig = px.line(df_monthly, x="period", y=["delay_rate", "cancel_rate"],
+                          title=f"Disruption Trends {year}",
+                          color_discrete_sequence=["#68a368", "#a8d0a8"],
+                          labels={'value': 'Rate', 'period': 'Month'})
+
+            fig.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color="#e8f0e8",
+                title_font_color="#68a368"
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Monthly trends loading...")
 
 if selected_view == "Single Airport Overview":
 
