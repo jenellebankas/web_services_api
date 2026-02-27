@@ -1,7 +1,6 @@
 # scripts/seed_db.py
 import pandas as pd
-from datetime import datetime, date, timedelta, time
-import sqlalchemy
+from datetime import datetime, timedelta, time
 from sqlalchemy.orm import Session
 from pathlib import Path
 import sys
@@ -39,8 +38,8 @@ def hhmm_to_datetime(flight_date, hhmm_value):
         return None
 
 
-def seed_flight_data(csv_path: str, year: int):
-    df = pd.read_csv(csv_path, nrows=50000)  # Sample for dev (remove nrows for full)
+def seed_flight_data(parquet_path: str, year: int):
+    df = pd.read_parquet(parquet_path, nrows=50000)  # Sample for dev (remove nrows for full)
 
     db: Session = SessionLocal()
     try:
@@ -80,5 +79,5 @@ def seed_flight_data(csv_path: str, year: int):
 
 
 if __name__ == "__main__":
-    seed_flight_data("datasets/flights_2023.csv", 2023)
-    seed_flight_data("datasets/flights_2024.csv", 2024)
+    seed_flight_data("datasets/flights_2023.parquet", 2023)
+    seed_flight_data("datasets/flights_2024.parquet", 2024)
