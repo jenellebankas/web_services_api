@@ -33,6 +33,22 @@ no_sidebar_style = """
 """
 st.markdown(no_sidebar_style, unsafe_allow_html=True)
 
+with st.sidebar:
+    st.header("Airport analytics")
+    selected_view = st.radio(
+        "Select analysis",
+        [
+            "Single Airport Overview",
+            "Daily & Weekly Patterns",
+            "Route Analysis & Best Times",
+        ],
+        index=0,
+        key="nav_view",
+    )
+
+    st.markdown("---")
+    st.caption("API: /api/v1/analytics")
+
 
 # Header
 st.title("Flight Disruption Analytics")
