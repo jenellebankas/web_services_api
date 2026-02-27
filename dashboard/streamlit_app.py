@@ -154,7 +154,7 @@ if selected_view == "Route Analysis & Best Times":
         airport = st.text_input("Airport", "JFK", key="best_time_airport").upper()
 
         if airport:
-            best_data = api.fetch(f"best-time/{airport}", {"year": year})
+            best_data = api.fetch(f"best-time/{airport}", {"year": year_best})
             if best_data:
                 st.success(best_data["insight"])
 
@@ -178,7 +178,7 @@ if selected_view == "Route Analysis & Best Times":
         destinations = st.text_input("Destinations", "LAX,ORD,ATL", key="route_destinations")
 
         if origin and destinations:
-            route_data = api.fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year})
+            route_data = api.fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year_route})
             if route_data:
                 st.success(f"**Safest:** {route_data['safest_route']} | **Riskiest:** {route_data['riskiest_route']}")
 
