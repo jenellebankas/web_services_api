@@ -84,7 +84,6 @@ if selected_view == "System Overview":
     with tab2:
 
         # Row 2: Year-over-Year Airport Comparison
-        st.markdown("---")
         st.markdown("### Compare Airport Performance")
         airports_input = st.text_input("Airports", "JFK,LAX,ORD", key="compare_airports")
         compare_year = st.selectbox("Year", [2023, 2024], index=1, key="compare_year")
@@ -115,10 +114,11 @@ if selected_view == "System Overview":
             st.info("Carrier data loading...")
 
     with tab3:
-        trends_year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="tab3_year")
 
         st.markdown("### Monthly Disruption Trends")
+        trends_year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="tab3_year")
         monthly_data = api.fetch("monthly-trends", {"year": trends_year})
+
         if monthly_data:
             df_monthly = pd.DataFrame(monthly_data)
 
@@ -181,7 +181,6 @@ if selected_view == "Route Analysis & Best Times":
             with col_best2:
                 st.metric("Worst Hour", f"{worst_df.iloc[0]['hour']}:00")
                 st.metric("Delay Risk", f"{worst_df.iloc[0]['delay_rate'] * 100:.1f}%")
-
 
     st.markdown("### Route Risk")
     year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
