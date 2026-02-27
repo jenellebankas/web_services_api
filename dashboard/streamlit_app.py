@@ -22,6 +22,18 @@ h1,h2,h3 {{ color: {DARK_THEME["accent"]}!important; }}
 </style>
 """, unsafe_allow_html=True)
 
+# Source - https://stackoverflow.com/a/74281694
+# Posted by sumshyftw
+# Retrieved 2026-02-27, License - CC BY-SA 4.0
+
+no_sidebar_style = """
+    <style>
+        div[data-testid="stSidebarNav"] {display: none;}
+    </style>
+"""
+st.markdown(no_sidebar_style, unsafe_allow_html=True)
+
+
 # Header
 st.title("Flight Disruption Analytics")
 st.markdown("**Professional dashboard for aviation performance insights**")
