@@ -226,7 +226,7 @@ def compare_airports(
     return AirportComparisonResponse(year=year, airports=items)
 
 
-@router.get("/daily-pattern/{airport}", response_model=DailyPatternResponse)
+@router.get("/daily-pattern", response_model=DailyPatternResponse)
 def daily_pattern(
     airport: str,
     year: int = 2024,
@@ -280,7 +280,7 @@ DOW_MAP = {
 }
 
 
-@router.get("/weekly-pattern/{airport}", response_model=WeeklyPatternResponse)
+@router.get("/weekly-pattern", response_model=WeeklyPatternResponse)
 def weekly_pattern(
     airport: str,
     year: int = 2024,
