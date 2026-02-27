@@ -51,13 +51,11 @@ with st.sidebar:
 st.title("Flight Disruption Analytics")
 st.markdown("**Professional dashboard for aviation performance insights**")
 
-# Main content tabs
-tab1, tab2, tab3 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patterns"])
-
 if selected_view == "System Overview":
+    # Main content tabs
+    tab1, tab2, tab3 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patterns"])
 
     with tab1:
-        year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="main_year")
         st.markdown("## System-Wide Analytics")
 
         col1, col2, col3, col4 = st.columns(4)
@@ -72,6 +70,7 @@ if selected_view == "System Overview":
 
         st.markdown("## Punctuality Leaderboard")
 
+        year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="main_year")
         data = api.fetch("leaderboard/punctuality", {"year": year})
         if data:
             col1, col2 = st.columns(2)
