@@ -176,10 +176,10 @@ if selected_view == "Route Analysis & Best Times":
             worst_df = pd.DataFrame(best_data["worst_hours"])
 
             with col_best1:
-                st.metric("Best Hour", f"{best_df.iloc[0]['hour']}:00")
+                st.metric("Best Hour", f"{str(best_df.iloc[0]['hour']).replace('.', ':')}:00")
                 st.metric("Delay Risk", f"{best_df.iloc[0]['delay_rate'] * 100:.1f}%")
             with col_best2:
-                st.metric("Worst Hour", f"{worst_df.iloc[0]['hour']}:00")
+                st.metric("Worst Hour", f"{str(worst_df.iloc[0]['hour']).replace('.', ':')}:00")
                 st.metric("Delay Risk", f"{worst_df.iloc[0]['delay_rate'] * 100:.1f}%")
 
     st.markdown("### Route Risk")
