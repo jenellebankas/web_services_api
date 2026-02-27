@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 import sys
 
+
 sys.path.append(str(Path(__file__).parent.parent))
 from app.database import SessionLocal, engine
 from app import models
