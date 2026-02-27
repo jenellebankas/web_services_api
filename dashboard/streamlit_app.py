@@ -83,11 +83,28 @@ if selected_view == "System Overview":
                 st.dataframe(pd.DataFrame(data["bottom_airports"]), use_container_width=True)
 
     with tab2:
-        year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="tab2_year")
+
+        # Row 2: Year-over-Year Airport Comparison
+        st.markdown("---")
+        st.markdown("### Compare Airport Performance")
+        airports_input = st.text_input("Airports", "JFK,LAX,ORD", key="compare_airports")
+        compare_year = st.selectbox("Year", [2023, 2024], index=1, key="compare_year")
+
+        if airports_input:
+            compare_data = api.fetch("compare-airports", {
+                "airports": airports_input,
+                "year": compare_year
+            })
+            if compare_data:
+                df_compare = pd.DataFrame(compare_data["airports"])
+                st.dataframe(
+                    df_compare.style.background_gradient(cmap='RdYlGn_r', subset=['delay_rate']),
+                    use_container_width=True
+                )
 
         # 2. TOP CARRIER PERFORMANCE (Network-wide)
         st.markdown("### Carrier Performance Ranking")
-        carrier_data = api.fetch("carrier-performance", {"year": year})  # Pass year param
+        carrier_data = api.fetch("carrier-performance", {"year": compare_year})  # Pass year param
         if carrier_data:
             df_carriers = pd.DataFrame(carrier_data)
             st.dataframe(
@@ -144,62 +161,38 @@ if selected_view == "Single Airport Overview":
 if selected_view == "Route Analysis & Best Times":
     st.markdown("## Route Analysis & Best Times")
 
-    # Row 1: Best Time to Fly (Left) + Route Risk (Right)
-    col1, col2 = st.columns(2)
+    st.markdown("### Best Time to Fly")
+    year_best = st.selectbox("Year", [2023, 2024], index=1, key="best_time_year")
+    airport = st.text_input("Airport", "JFK", key="best_time_airport").upper()
 
-    # LEFT: Best Time to Fly
-    with col1:
-        st.markdown("### Best Time to Fly")
-        year_best = st.selectbox("Year", [2023, 2024], index=1, key="best_time_year")
-        airport = st.text_input("Airport", "JFK", key="best_time_airport").upper()
+    if airport:
+        best_data = api.fetch(f"best-time/{airport}", {"year": year_best})
+        if best_data:
+            st.success(best_data["insight"])
 
-        if airport:
-            best_data = api.fetch(f"best-time/{airport}", {"year": year_best})
-            if best_data:
-                st.success(best_data["insight"])
+            # Best vs Worst hours table
+            col_best1, col_best2 = st.columns(2)
+            best_df = pd.DataFrame(best_data["best_hours"])
+            worst_df = pd.DataFrame(best_data["worst_hours"])
 
-                # Best vs Worst hours table
-                col_best1, col_best2 = st.columns(2)
-                best_df = pd.DataFrame(best_data["best_hours"])
-                worst_df = pd.DataFrame(best_data["worst_hours"])
+            with col_best1:
+                st.metric("Best Hour", f"{best_df.iloc[0]['hour']}:00")
+                st.metric("Delay Risk", f"{best_df.iloc[0]['delay_rate'] * 100:.1f}%")
+            with col_best2:
+                st.metric("Worst Hour", f"{worst_df.iloc[0]['hour']}:00")
+                st.metric("Delay Risk", f"{worst_df.iloc[0]['delay_rate'] * 100:.1f}%")
 
-                with col_best1:
-                    st.metric("Best Hour", f"{best_df.iloc[0]['hour']}:00")
-                    st.metric("Delay Risk", f"{best_df.iloc[0]['delay_rate'] * 100:.1f}%")
-                with col_best2:
-                    st.metric("Worst Hour", f"{worst_df.iloc[0]['hour']}:00")
-                    st.metric("Delay Risk", f"{worst_df.iloc[0]['delay_rate'] * 100:.1f}%")
 
-    # RIGHT: Route Risk Analysis
-    with col2:
-        st.markdown("### Route Risk")
-        year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
-        origin = st.text_input("Origin", "JFK", key="route_origin").upper()
-        destinations = st.text_input("Destinations", "LAX,ORD,ATL", key="route_destinations")
+    st.markdown("### Route Risk")
+    year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
+    origin = st.text_input("Origin", "JFK", key="route_origin").upper()
+    destinations = st.text_input("Destinations", "LAX,ORD,ATL", key="route_destinations")
 
-        if origin and destinations:
-            route_data = api.fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year_route})
-            if route_data:
-                st.success(f"**Safest:** {route_data['safest_route']} | **Riskiest:** {route_data['riskiest_route']}")
+    if origin and destinations:
+        route_data = api.fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year_route})
+        if route_data:
+            st.success(f"**Safest:** {route_data['safest_route']} | **Riskiest:** {route_data['riskiest_route']}")
 
-                # Top 3 safest routes
-                df_routes = pd.DataFrame(route_data["routes"][:3])
-                st.dataframe(df_routes[['dest', 'risk_score', 'delay_rate']], use_container_width=True)
-
-    # Row 2: Year-over-Year Airport Comparison
-    st.markdown("---")
-    st.markdown("### Compare Airport Performance")
-    airports_input = st.text_input("Airports", "JFK,LAX,ORD", key="compare_airports")
-    compare_year = st.selectbox("Year", [2023, 2024], index=1, key="compare_year")
-
-    if airports_input:
-        compare_data = api.fetch("compare-airports", {
-            "airports": airports_input,
-            "year": compare_year
-        })
-        if compare_data:
-            df_compare = pd.DataFrame(compare_data["airports"])
-            st.dataframe(
-                df_compare.style.background_gradient(cmap='RdYlGn_r', subset=['delay_rate']),
-                use_container_width=True
-            )
+            # Top 3 safest routes
+            df_routes = pd.DataFrame(route_data["routes"][:3])
+            st.dataframe(df_routes[['dest', 'risk_score', 'delay_rate']], use_container_width=True)
