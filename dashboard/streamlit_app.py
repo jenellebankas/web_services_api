@@ -51,7 +51,7 @@ st.title("Flight Disruption Analytics")
 st.markdown("**Professional dashboard for aviation performance insights**")
 
 # Main content tabs
-tab1, tab2, tab3, tab4 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patterns"])
+tab1, tab2, tab3 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patterns"])
 year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="main_year")
 with tab1:
     st.markdown("## Punctuality Leaderboard")
