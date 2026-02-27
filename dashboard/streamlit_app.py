@@ -115,10 +115,10 @@ if selected_view == "System Overview":
             st.info("Carrier data loading...")
 
     with tab3:
-        year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="tab3_year")
+        trends_year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="tab3_year")
 
         st.markdown("### Monthly Disruption Trends")
-        monthly_data = api.fetch("monthly-trends", {"year": year})
+        monthly_data = api.fetch("monthly-trends", {"year": trends_year})
         if monthly_data:
             df_monthly = pd.DataFrame(monthly_data)
 
