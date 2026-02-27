@@ -142,6 +142,7 @@ if selected_view == "Single Airport Overview":
 
     st.markdown("## Airport Delays")
     airport = st.text_input("Airport", "JFK", key="airport_analysis").upper()
+    time_year = st.selectbox("Year", [2023, 2024], index=1, key="time_year")
 
     if airport:
         data = api.fetch(f"airport-delays/{airport}")
@@ -153,10 +154,10 @@ if selected_view == "Single Airport Overview":
             metrics.metric_card("Cancel Rate", f"{data['cancel_rate'] * 100:.1f}%", col4)
 
         st.markdown("### Daily Pattern")
-        st.dataframe(api.fetch(f"daily-pattern/{airport}"))
+        st.dataframe(api.fetch(f"daily-pattern/{airport}?{time_year}"))
 
         st.markdown("### Weekly Pattern")
-        st.dataframe(api.fetch(f"weekly-pattern/{airport}"))
+        st.dataframe(api.fetch(f"weekly-pattern/{airport}?{time_year}"))
 
 if selected_view == "Route Analysis & Best Times":
     st.markdown("## Route Analysis & Best Times")
