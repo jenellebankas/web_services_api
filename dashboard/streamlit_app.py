@@ -40,7 +40,8 @@ with st.sidebar:
         [
             "System Overview",
             "Single Airport Overview",
-            "Route Analysis & Best Times",
+            "Route Risk",
+            "Best Time to Fly"
         ],
         index=0,
         key="nav_view",
@@ -158,8 +159,23 @@ if selected_view == "Single Airport Overview":
         st.markdown("### Weekly Pattern")
         st.dataframe(api.fetch("weekly-pattern/", {"airport": airport, "year": time_year}))
 
-if selected_view == "Route Analysis & Best Times":
-    st.markdown("## Route Analysis & Best Times")
+if selected_view == "Route Risk":
+
+    st.markdown("### Route Risk")
+    year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
+    origin = st.text_input("Origin", "JFK", key="route_origin").upper()
+    destinations = st.text_input("Destinations", "LAX,ORD,ATL", key="route_destinations")
+
+    if origin and destinations:
+        route_data = api.fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year_route})
+        if route_data:
+            st.success(f"**Safest:** {route_data['safest_route']} | **Riskiest:** {route_data['riskiest_route']}")
+
+            # Top 3 safest routes
+            df_routes = pd.DataFrame(route_data["routes"][:3])
+            st.dataframe(df_routes[['dest', 'risk_score', 'delay_rate']], use_container_width=True)
+
+if selected_view == "Best Time to Fly":
 
     st.markdown("### Best Time to Fly")
     year_best = st.selectbox("Year", [2023, 2024], index=1, key="best_time_year")
@@ -181,17 +197,3 @@ if selected_view == "Route Analysis & Best Times":
             with col_best2:
                 st.metric("Worst Hour", f"{str(worst_df.iloc[0]['hour']).replace('.', ':')}0")
                 st.metric("Delay Risk", f"{worst_df.iloc[0]['delay_rate'] * 100:.1f}%")
-
-    st.markdown("### Route Risk")
-    year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
-    origin = st.text_input("Origin", "JFK", key="route_origin").upper()
-    destinations = st.text_input("Destinations", "LAX,ORD,ATL", key="route_destinations")
-
-    if origin and destinations:
-        route_data = api.fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year_route})
-        if route_data:
-            st.success(f"**Safest:** {route_data['safest_route']} | **Riskiest:** {route_data['riskiest_route']}")
-
-            # Top 3 safest routes
-            df_routes = pd.DataFrame(route_data["routes"][:3])
-            st.dataframe(df_routes[['dest', 'risk_score', 'delay_rate']], use_container_width=True)
