@@ -46,20 +46,16 @@ with st.sidebar:
         key="nav_view",
     )
 
-    st.markdown("---")
-    st.caption("API: /api/v1/analytics")
-
 
 # Header
 st.title("Flight Disruption Analytics")
 st.markdown("**Professional dashboard for aviation performance insights**")
 
 # Main content tabs
-tab1, tab2, tab3, tab4 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patterns", "Route Planning"])
-
+tab1, tab2, tab3, tab4 = st.tabs(["Leaderboard", "Airport Analysis", "Time Patterns"])
+year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="main_year")
 with tab1:
     st.markdown("## Punctuality Leaderboard")
-    year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="main_year")
 
     data = api.fetch("leaderboard/punctuality", {"year": year})
     if data:
@@ -101,7 +97,7 @@ with tab3:
         if airport_weekly:
             st.dataframe(api.fetch(f"weekly-pattern/{airport_weekly}"))
 
-with tab4:
+if selected_view == "Route Analysis & Best Times":
     st.markdown("## Route Analysis & Best Times")
 
     # Row 1: Best Time to Fly (Left) + Route Risk (Right)
@@ -164,12 +160,7 @@ with tab4:
                 use_container_width=True
             )
 
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown("## System-Wide Analytics")
-with col2:
-    year = st.selectbox("Year:", [2023, 2024], index=1, label_visibility="collapsed")
-
+st.markdown("## System-Wide Analytics")
 
 col1, col2, col3, col4 = st.columns(4)
 system_data = api.fetch("system-overview")
@@ -181,7 +172,7 @@ if system_data:
 else:
     st.warning("System overview loading...")
 
-# 2. TOP CARRIER PERFORMANCE (Network-wide) - FIXED
+# 2. TOP CARRIER PERFORMANCE (Network-wide)
 st.markdown("### Carrier Performance Ranking")
 carrier_data = api.fetch("carrier-performance", {"year": year})  # Pass year param
 if carrier_data:
