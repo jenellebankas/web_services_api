@@ -39,7 +39,6 @@ with st.sidebar:
         "Select analysis",
         [
             "Single Airport Overview",
-            "Daily & Weekly Patterns",
             "Route Analysis & Best Times",
         ],
         index=0,
@@ -68,7 +67,8 @@ with tab1:
             st.markdown("### Bottom 10 Airports")
             st.dataframe(pd.DataFrame(data["bottom_airports"]), use_container_width=True)
 
-with tab2:
+if selected_view == "Single Airport Overview":
+
     st.markdown("## Airport Delays")
     airport = st.text_input("Airport", "JFK", key="airport_analysis").upper()
 
@@ -81,21 +81,18 @@ with tab2:
             metrics.metric_card("Delay Rate", f"{data['delay_rate'] * 100:.1f}%", col3)
             metrics.metric_card("Cancel Rate", f"{data['cancel_rate'] * 100:.1f}%", col4)
 
-with tab3:
     pattern_col1, pattern_col2 = st.columns(2)
     with pattern_col1:
         st.markdown("### Daily Pattern")
-        airport_daily = st.text_input("Airport", "JFK", key="daily_pattern_airport").upper()
 
         if airport:
             st.dataframe(api.fetch(f"daily-pattern/{airport}"))
 
     with pattern_col2:
         st.markdown("### Weekly Pattern")
-        airport_weekly = st.text_input("Airport", "JFK", key="weekly_pattern_airport").upper()
 
-        if airport_weekly:
-            st.dataframe(api.fetch(f"weekly-pattern/{airport_weekly}"))
+        if airport:
+            st.dataframe(api.fetch(f"weekly-pattern/{airport}"))
 
 if selected_view == "Route Analysis & Best Times":
     st.markdown("## Route Analysis & Best Times")
@@ -107,7 +104,7 @@ if selected_view == "Route Analysis & Best Times":
     with col1:
         st.markdown("### Best Time to Fly")
         year_best = st.selectbox("Year", [2023, 2024], index=1, key="best_time_year")
-        airport_best = st.text_input("Airport", "JFK", key="best_time_airport").upper()
+        airport = st.text_input("Airport", "JFK", key="best_time_airport").upper()
 
         if airport:
             best_data = api.fetch(f"best-time/{airport}", {"year": year})
