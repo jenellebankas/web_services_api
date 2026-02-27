@@ -49,7 +49,6 @@ with st.sidebar:
 
 # Header
 st.title("Flight Disruption Analytics")
-st.markdown("**Professional dashboard for aviation performance insights**")
 
 if selected_view == "System Overview":
     # Main content tabs
