@@ -67,3 +67,13 @@ def carrier_performance(year: int = Query(2024), db: Session = Depends(get_db)):
 @router.get("/monthly-trends")
 def monthly_trends(year: int = Query(2024), db: Session = Depends(get_db)):
     return AnalyticsService(db).monthly_trends(year)
+
+
+@router.get("/chaos-score/{airport}")
+def chaos_score(airport: str, lookback_days: int = Query(7, ge=1, le=30), db: Session = Depends(get_db)):
+    """CHAOS SCORE: Real-time airport disruption severity (0-100)"""
+    try:
+        return AnalyticsService(db).chaos_score(airport, lookback_days)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
