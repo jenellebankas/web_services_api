@@ -106,11 +106,10 @@ if selected_view == "System Overview":
         carrier_data = api.fetch("carrier-performance", {"year": compare_year})  # Pass year param
         if carrier_data:
             df_carriers = pd.DataFrame(carrier_data)
-            st.dataframe(
-                df_carriers.head(10).style.background_gradient(cmap='Greens', subset=['otp_pct']),
-                use_container_width=True,
-                hide_index=True
-            )
+            fig_carrier = px.bar(df_carriers.head(10), x="carrier", y="otp_pct",
+                                 title="Top Carriers by On-Time Performance",
+                                 color_discrete_sequence=["#4caf50"])
+            st.plotly_chart(fig_carrier, use_container_width=True)
         else:
             st.info("Carrier data loading...")
 
@@ -139,12 +138,12 @@ if selected_view == "System Overview":
             st.info("Monthly trends loading...")
 
 if selected_view == "Single Airport Overview":
-
-    st.markdown("## Airport Delays")
-    airport = st.text_input("Airport", "JFK", key="airport_analysis").upper()
-    time_year = st.selectbox("Year", [2023, 2024], index=1, key="time_year")
+    # COMMON INPUTS (batch at top)
+    airport = st.text_input("Airport", "JFK", key="overview_airport").upper()
+    analysis_year = st.selectbox("Year", [2023, 2024], index=1, key="overview_year")
 
     if airport:
+        # AIRPORT METRICS (existing - perfect)
         data = api.fetch(f"airport-delays/{airport}")
         if data:
             col1, col2, col3, col4 = st.columns(4)
@@ -153,11 +152,44 @@ if selected_view == "Single Airport Overview":
             metrics.metric_card("Delay Rate", f"{data['delay_rate'] * 100:.1f}%", col3)
             metrics.metric_card("Cancel Rate", f"{data['cancel_rate'] * 100:.1f}%", col4)
 
-        st.markdown("### Daily Pattern")
-        st.dataframe(api.fetch("daily-pattern/", {"airport": airport, "year": time_year}))
+        # DAILY PATTERNS → CHART (NEW)
+        st.markdown("### Daily Delay Patterns")
+        daily_data = api.fetch("daily-pattern", {"airport": airport, "year": analysis_year})
+        if daily_data and daily_data["hours"]:
+            df_daily = pd.DataFrame(daily_data["hours"])
+            fig_daily = px.line(df_daily, x="hour", y="delay_rate",
+                                title=f"{airport} Hourly Delay Rate ({analysis_year})",
+                                markers=True, color_discrete_sequence=["#4caf50"])
+            fig_daily.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig_daily, use_container_width=True)
 
-        st.markdown("### Weekly Pattern")
-        st.dataframe(api.fetch("weekly-pattern/", {"airport": airport, "year": time_year}))
+            # Daily best/worst
+            best_hour = df_daily.loc[df_daily['delay_rate'].idxmin()]
+            worst_hour = df_daily.loc[df_daily['delay_rate'].idxmax()]
+            col1, col2 = st.columns(2)
+            col1.metric("Best Hour", f"{best_hour['hour']}:00", f"{best_hour['delay_rate']:.1%}")
+            col2.metric("Worst Hour", f"{worst_hour['hour']}:00", f"{worst_hour['delay_rate']:.1%}")
+
+        # WEEKLY PATTERNS → CHART (NEW)
+        st.markdown("### Weekly Delay Patterns")
+        weekly_data = api.fetch("weekly-pattern", {"airport": airport, "year": analysis_year})
+        if weekly_data and weekly_data["days"]:
+            df_weekly = pd.DataFrame(weekly_data["days"])
+            df_weekly['delay_rate_pct'] = df_weekly['delay_rate'] * 100
+
+            fig_weekly = px.bar(df_weekly, x="dow", y="delay_rate_pct",
+                                title=f"{airport} Weekly Delay Rates ({analysis_year})",
+                                color_discrete_sequence=["#66bb6a"], text="delay_rate_pct")
+            fig_weekly.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+            fig_weekly.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig_weekly, use_container_width=True)
+
+            # Weekly best/worst
+            worst_day = df_weekly.loc[df_weekly['delay_rate_pct'].idxmax()]
+            best_day = df_weekly.loc[df_weekly['delay_rate_pct'].idxmin()]
+            col1, col2 = st.columns(2)
+            col1.metric("Worst Day", worst_day['dow'], f"{worst_day['delay_rate_pct']:.1f}%")
+            col2.metric("Best Day", best_day['dow'], f"{best_day['delay_rate_pct']:.1f}%")
 
 if selected_view == "Route Risk":
 
