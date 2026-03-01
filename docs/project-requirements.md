@@ -10,11 +10,14 @@
 
 **Target Users**: Airport operations, airline analysts, aviation researchers.
 
-## 📊 Data Source
+## Data Source
 
 **Datasets**: US Bureau of Transportation Statistics flight data
-- `flights_2023.csv` (~X rows)
-- `flights_2024.csv` (~X rows)
+- `flights_2023.parquet` (~6847899 rows)
+- `flights_2024.parquet` (~7079061 rows)
 
-**Key Fields** (fill these in after CSV inspection):
+**Key Fields**:
 
+- Core: flight_date, airline, origin, dest, times
+- Disruption: dep/arr delays, cancelled, diverted  
+- Causes: carrier_delay, weather_delay, nas_delay
