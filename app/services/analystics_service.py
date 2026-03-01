@@ -99,10 +99,39 @@ class AnalyticsService:
                                     improvement_pct=improvement_pct)
 
     def compare_airports(self, airports: str, year: int = 2024) -> AirportComparisonResponse:
-        airport_list = [a.strip().upper() for a in airports.split(",") if a.strip()]
-        if not airport_list:
+        airport_list = list(set([a.strip().upper() for a in airports.split(",") if a.strip()]))
+
+        if len(airport_list) == 0:
             raise ValueError("No airports provided")
 
+        # single airport (including LAX,LAX → just LAX)
+        if len(airport_list) == 1:
+            airport = airport_list[0]
+            result = self.db.execute(
+                text("""
+                    SELECT origin AS airport, COUNT(*) AS total, 
+                           COALESCE(AVG(arr_delay_minutes), 0) AS avg_delay,
+                           SUM(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END) AS delayed, 
+                           SUM(cancelled) AS cancelled
+                    FROM flights 
+                    WHERE origin = :airport AND strftime('%Y', flight_date) = :year
+                """), {"airport": airport, "year": str(year)}
+            ).fetchone()
+
+            total = result.total or 0
+            if total == 0:
+                raise ValueError(f"No data for {airport}")
+
+            item = AirportComparisonItem(
+                airport=airport,
+                total_flights=int(total),
+                avg_arrival_delay=round(float(result.avg_delay or 0), 1),
+                delay_rate=round(float(result.delayed or 0) / total, 3),
+                cancel_rate=round(float(result.cancelled or 0) / total, 3),
+            )
+            return AirportComparisonResponse(year=year, airports=[item])
+
+        # Multiple UNIQUE airports
         placeholders = ",".join([f":a{i}" for i in range(len(airport_list))])
         params = {f"a{i}": code for i, code in enumerate(airport_list)}
         params["year"] = str(year)
