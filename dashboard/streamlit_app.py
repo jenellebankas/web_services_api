@@ -41,7 +41,8 @@ with st.sidebar:
             "System Overview",
             "Single Airport Overview",
             "Route Risk",
-            "Best Time to Fly"
+            "Best Time to Fly",
+            "Chaos Score"
         ],
         index=0,
         key="nav_view",
@@ -229,3 +230,46 @@ if selected_view == "Best Time to Fly":
             with col_best2:
                 st.metric("Worst Hour", f"{str(worst_df.iloc[0]['hour']).replace('.', ':')}0")
                 st.metric("Delay Risk", f"{worst_df.iloc[0]['delay_rate'] * 100:.1f}%")
+
+
+if selected_view == "Chaos Score":
+    st.markdown("### Real-Time Airport Chaos Score")
+    airport = st.text_input("Airport", "JFK", key="chaos_airport").upper()
+    days = st.slider("Lookback days", 1, 30, 7, key="chaos_days")
+
+    if airport:
+        with st.spinner(f"Calculating {airport} chaos..."):
+            chaos_data = api.fetch(f"chaos-score/{airport}", {"lookback_days": days})
+
+        if chaos_data:
+            # 🔥 GAUGE-STYLE DISPLAY
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.metric(
+                    f"{airport} Chaos Score",
+                    f"{chaos_data['chaos_score']}/100",
+                    delta=f"{chaos_data['chaos_level']}"
+                )
+
+            with col2:
+                st.markdown(f"""
+                <div style="background: {chaos_data['score_color']}; 
+                           color: white; padding: 1rem; border-radius: 10px; 
+                           text-align: center; font-weight: bold; font-size: 1.2rem;">
+                **{chaos_data['chaos_level']}**
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Component breakdown
+            st.markdown("### Chaos Factors")
+            comp_df = pd.DataFrame([chaos_data['components']]).T
+            comp_df.columns = ["Score Contribution"]
+            st.dataframe(comp_df.style.background_gradient(cmap='Reds'),
+                         use_container_width=True, height=300)
+
+            # Recent stats
+            st.markdown("### Recent Performance")
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Flights", f"{chaos_data['recent_stats']['flights']:,}")
+            col2.metric("Avg Delay", f"{chaos_data['recent_stats']['avg_delay']:.1f} min")
+            col3.metric("Cancel Rate", f"{chaos_data['recent_stats']['cancel_rate']:.1%}")

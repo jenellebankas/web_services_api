@@ -436,3 +436,70 @@ class AnalyticsService:
 
         return [{"period": r.period, "flights": int(r.flights), "avg_delay": float(r.avg_delay),
                  "delay_rate": float(r.delay_rate), "cancel_rate": float(r.cancel_rate)} for r in result]
+
+    def chaos_score(self, airport: str, lookback_days: int = 7) -> Dict[str, Any]:
+        """🚨 CHAOS SCORE: How chaotic is this airport RIGHT NOW? (0-100)"""
+
+        # Recent performance (last N days vs baseline)
+        recent = self.db.execute(text("""
+            SELECT 
+                AVG(arr_delay_minutes) as recent_avg_delay,
+                AVG(CASE WHEN arr_del_15 = 1 THEN 1.0 ELSE 0 END) as recent_delay_rate,
+                AVG(cancelled*1.0) as recent_cancel_rate,
+                COUNT(*) as recent_flights,
+                COUNT(DISTINCT reporting_airline) as unique_carriers,
+                AVG(dep_delay_minutes) as recent_dep_delay
+            FROM flights 
+            WHERE origin = :airport 
+              AND flight_date >= date('now', '-:days days')
+        """), {"airport": airport, "days": lookback_days}).fetchone()
+
+        if not recent or recent.recent_flights < 20:
+            raise ValueError(f"Insufficient data for {airport}")
+
+        # Historical baseline (last 90 days)
+        baseline = self.db.execute(text("""
+            SELECT AVG(arr_delay_minutes) as hist_avg_delay,
+                   AVG(CASE WHEN arr_del_15 = 1 THEN 1.0 ELSE 0 END) as hist_delay_rate,
+                   AVG(cancelled*1.0) as hist_cancel_rate
+            FROM flights WHERE origin = :airport 
+              AND flight_date >= date('now', '-90 days')
+        """), {"airport": airport}).fetchone()
+
+        # 🔥 CHAOS SCORE CALCULATION (weighted formula)
+        delay_spike = max(0, (recent.recent_avg_delay - (baseline.hist_avg_delay or 15)) / 10) * 25
+        cancel_spike = min(recent.recent_cancel_rate * 2000, 20)
+        carrier_chaos = min((recent.unique_carriers - 2) * 4, 15)
+        delay_rate_spike = max(0, (recent.recent_delay_rate - (baseline.hist_delay_rate or 0.2)) * 3) * 25
+        volume_spike = min(recent.recent_flights / 50, 15)
+
+        chaos_score = round(delay_spike + cancel_spike + carrier_chaos + delay_rate_spike + volume_spike, 1)
+        chaos_score = min(chaos_score, 100)
+
+        # Chaos levels
+        if chaos_score < 25:
+            level, color = "Calm", "#4caf50"
+        elif chaos_score < 60:
+            level, color = "Watch", "#ff9800"
+        else:
+            level, color = "Chaos", "#f44336"
+
+        return {
+            "airport": airport,
+            "chaos_score": chaos_score,
+            "chaos_level": level,
+            "score_color": color,
+            "components": {
+                "delay_spike": round(delay_spike, 1),
+                "cancel_spike": round(cancel_spike, 1),
+                "carrier_chaos": round(carrier_chaos, 1),
+                "delay_rate_spike": round(delay_rate_spike, 1),
+                "volume_spike": round(volume_spike, 1)
+            },
+            "recent_stats": {
+                "flights": int(recent.recent_flights),
+                "avg_delay": round(float(recent.recent_avg_delay or 0), 1),
+                "delay_rate": round(float(recent.recent_delay_rate or 0), 3),
+                "cancel_rate": round(float(recent.recent_cancel_rate or 0), 3)
+            }
+        }
