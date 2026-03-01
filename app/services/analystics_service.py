@@ -292,9 +292,59 @@ class AnalyticsService:
 
     def route_risk_score(self, origin: str, destinations: str, year: int = 2024) -> RouteRiskResponse:
         dest_list = [d.strip().upper() for d in destinations.split(",") if d.strip()]
-        if len(dest_list) < 2 or len(dest_list) > 10:
-            raise ValueError("Provide 2-10 destinations")
 
+        # FIX: Handle single destination + deduplicate
+        dest_list = list(set(dest_list))  # Remove duplicates like "LAX,LAX"
+
+        if len(dest_list) < 1:
+            raise ValueError("Provide at least 1 destination")
+        if len(dest_list) > 10:
+            raise ValueError("Maximum 10 destinations")
+
+        # Single destination case
+        if len(dest_list) == 1:
+            dest = dest_list[0]
+            result = self.db.execute(
+                text("""
+                    SELECT dest AS dest, COUNT(*) AS total_flights, 
+                           COALESCE(AVG(arr_delay_minutes), 0) AS avg_arr_delay,
+                           SUM(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END)*1.0 / COUNT(*) AS delay_rate,
+                           SUM(cancelled)*1.0 / COUNT(*) AS cancel_rate
+                    FROM flights 
+                    WHERE origin = :origin AND dest = :dest 
+                          AND strftime('%Y', flight_date) = :year
+                    GROUP BY dest HAVING total_flights >= 10
+                """), {"origin": origin.upper(), "dest": dest, "year": str(year)}
+            ).fetchone()
+
+            if not result:
+                raise ValueError("No route data found")
+
+            # Single route risk score
+            risk_score = round(
+                float(result.delay_rate or 0) * 40 +
+                min(float(result.avg_arr_delay or 0) / 30, 1) * 30 +
+                float(result.cancel_rate or 0) * 3000, 1
+            )
+
+            route_item = RouteRiskItem(
+                dest=result.dest,
+                risk_score=risk_score,
+                delay_rate=round(float(result.delay_rate or 0), 3),
+                avg_arr_delay=round(float(result.avg_arr_delay or 0), 1),
+                cancel_rate=round(float(result.cancel_rate or 0), 3),
+                total_flights=int(result.total_flights),
+            )
+
+            return RouteRiskResponse(
+                origin=origin.upper(),
+                year=year,
+                safest_route=f"{origin}→{route_item.dest}",
+                riskiest_route=f"{origin}→{route_item.dest}",
+                routes=[route_item]
+            )
+
+        # Multiple destinations - original dynamic SQL
         placeholders = ",".join([f":d{i}" for i in range(len(dest_list))])
         params = {f"d{i}": dest for i, dest in enumerate(dest_list)}
         params.update({"origin": origin.upper(), "year": str(year)})
