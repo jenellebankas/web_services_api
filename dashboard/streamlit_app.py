@@ -167,8 +167,8 @@ if selected_view == "Single Airport Overview":
             best_hour = df_daily.loc[df_daily['delay_rate'].idxmin()]
             worst_hour = df_daily.loc[df_daily['delay_rate'].idxmax()]
             col1, col2 = st.columns(2)
-            col1.metric("Best Hour", f"{str(best_hour['hour']).replace('.',':')}", f"{best_hour['delay_rate']:.1%}")
-            col2.metric("Worst Hour", f"{str(worst_hour['hour']).replace('.', ':')}", f"{worst_hour['delay_rate']:.1%}")
+            col1.metric("Best Hour", f"{str(best_hour['hour']).replace('.',':')}0", f"{best_hour['delay_rate']:.1%}")
+            col2.metric("Worst Hour", f"{str(worst_hour['hour']).replace('.', ':')}0", f"{worst_hour['delay_rate']:.1%}")
 
         # WEEKLY PATTERNS → CHART (NEW)
         st.markdown("### Weekly Delay Patterns")
