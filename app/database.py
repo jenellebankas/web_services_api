@@ -2,9 +2,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-
-# SQLite file in project root
-SQLALCHEMY_DATABASE_URL = "sqlite:///./aviation.db"
+from app.core.config import SQLALCHEMY_DATABASE_URL
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,

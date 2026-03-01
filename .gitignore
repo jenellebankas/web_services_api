@@ -208,10 +208,11 @@ __marimo__/
 
 # DATA STUFF
 datasets/
-datasets/*.csv
-datasets/flights_2023.csv
-datasets/flights_2024.csv
+datasets/*.parquet
+
 
 # env stuff
 .venv/
 *.pyc
+*.pyo
+
