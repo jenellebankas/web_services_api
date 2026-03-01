@@ -293,8 +293,11 @@ class AnalyticsService:
     def route_risk_score(self, origin: str, destinations: str, year: int = 2024) -> RouteRiskResponse:
         dest_list = [d.strip().upper() for d in destinations.split(",") if d.strip()]
 
-        # FIX: Handle single destination + deduplicate
-        dest_list = list(set(dest_list))  # Remove duplicates like "LAX,LAX"
+        dest_list = list(set(dest_list))
+
+        invalid_destinations = [dest for dest in dest_list if dest == origin]
+        if invalid_destinations:
+            raise ValueError(f"Cannot fly from {origin} to itself ({','.join(invalid_destinations)})")
 
         if len(dest_list) < 1:
             raise ValueError("Provide at least 1 destination")
