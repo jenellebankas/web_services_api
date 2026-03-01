@@ -91,6 +91,10 @@ class DisruptionScoreResponse(BaseModel):
     cancel_frequency: float
     top_delay_cause: str
 
+    disruption_level: str
+    period_days: int
+    vs_baseline: str
+
     model_config = ConfigDict(from_attributes=True)
 
 

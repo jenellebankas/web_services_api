@@ -40,9 +40,9 @@ with st.sidebar:
         [
             "System Overview",
             "Single Airport Overview",
+            "Disruption Score",
             "Route Risk",
-            "Best Time to Fly",
-            "Chaos Score"
+            "Best Time to Fly"
         ],
         index=0,
         key="nav_view",
@@ -192,6 +192,45 @@ if selected_view == "Single Airport Overview":
             col1.metric("Worst Day", worst_day['dow'], f"{worst_day['delay_rate_pct']:.1f}%")
             col2.metric("Best Day", best_day['dow'], f"{best_day['delay_rate_pct']:.1f}%")
 
+if selected_view == "Disruption Score":
+    st.markdown("### Recent Airport Disruption Score")
+    airport = st.text_input("Airport", "JFK", key="disruption_airport").upper()
+    days = st.slider("Lookback days", 3, 30, 7, key="disruption_days")
+
+    if airport:
+        with st.spinner(f"Analyzing {airport} disruption..."):
+            disruption_data = api.fetch(f"disruption-score/{airport}", {"days": days})
+
+        if disruption_data:
+            # Main score gauge
+            col1, col2, col3 = st.columns([2, 1, 2])
+            with col1:
+                st.metric(
+                    f"{airport} Disruption",
+                    f"{disruption_data['disruption_score']:.0f}/100",
+                    disruption_data['disruption_level']
+                )
+
+            with col2:
+                level_color = {"Low": "#4caf50", "Medium": "#ff9800", "High": "#f44336"}
+                st.markdown(f"""
+                <div style="background: {level_color.get(disruption_data['disruption_level'], '#ccc')};
+                           color: white; padding: 1.5rem; border-radius: 10px; 
+                           text-align: center; font-weight: bold; font-size: 1.3rem;">
+                {disruption_data['disruption_level']}
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col3:
+                st.caption(f"Last {disruption_data['period_days']} days vs 90-day baseline")
+                st.caption(disruption_data['vs_baseline'])
+
+            # Factor breakdown table
+            st.markdown("### Disruption Factors")
+            factors_df = pd.DataFrame(list(disruption_data.get('factors', {}).items()),
+                                      columns=['Metric', 'Value']).T
+            st.dataframe(factors_df.style, use_container_width=True)
+
 if selected_view == "Route Risk":
 
     st.markdown("### Route Risk")
@@ -230,46 +269,3 @@ if selected_view == "Best Time to Fly":
             with col_best2:
                 st.metric("Worst Hour", f"{str(worst_df.iloc[0]['hour']).replace('.', ':')}0")
                 st.metric("Delay Risk", f"{worst_df.iloc[0]['delay_rate'] * 100:.1f}%")
-
-
-if selected_view == "Chaos Score":
-    st.markdown("### Real-Time Airport Chaos Score")
-    airport = st.text_input("Airport", "JFK", key="chaos_airport").upper()
-    days = st.slider("Lookback days", 1, 30, 7, key="chaos_days")
-
-    if airport:
-        with st.spinner(f"Calculating {airport} chaos..."):
-            chaos_data = api.fetch(f"chaos-score/{airport}", {"lookback_days": days})
-
-        if chaos_data:
-            # 🔥 GAUGE-STYLE DISPLAY
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                st.metric(
-                    f"{airport} Chaos Score",
-                    f"{chaos_data['chaos_score']}/100",
-                    delta=f"{chaos_data['chaos_level']}"
-                )
-
-            with col2:
-                st.markdown(f"""
-                <div style="background: {chaos_data['score_color']}; 
-                           color: white; padding: 1rem; border-radius: 10px; 
-                           text-align: center; font-weight: bold; font-size: 1.2rem;">
-                **{chaos_data['chaos_level']}**
-                </div>
-                """, unsafe_allow_html=True)
-
-            # Component breakdown
-            st.markdown("### Chaos Factors")
-            comp_df = pd.DataFrame([chaos_data['components']]).T
-            comp_df.columns = ["Score Contribution"]
-            st.dataframe(comp_df.style.background_gradient(cmap='Reds'),
-                         use_container_width=True, height=300)
-
-            # Recent stats
-            st.markdown("### Recent Performance")
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Flights", f"{chaos_data['recent_stats']['flights']:,}")
-            col2.metric("Avg Delay", f"{chaos_data['recent_stats']['avg_delay']:.1f} min")
-            col3.metric("Cancel Rate", f"{chaos_data['recent_stats']['cancel_rate']:.1%}")
