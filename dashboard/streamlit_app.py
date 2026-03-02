@@ -196,26 +196,66 @@ if selected_view == "Disruption Score":
         st.warning("Enter a valid 3-letter airport code")
 
 # ROUTE RISK - Safe version
-if selected_view == "Route Risk":
-    st.markdown("### Route Risk Analysis")
-    year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
-    origin = st.text_input("Origin Airport", "JFK", key="route_origin").upper().strip()
-    destinations = st.text_input("Destinations (comma-separated)", "LAX,ORD,ATL", key="route_destinations").strip()
+if selected_view == "Disruption Score":
+    st.markdown("### Airport Disruption")
 
-    if len(origin) == 3 and origin.isalpha() and destinations:
-        route_data = safe_api_call("route-risk", {
-            "origin": origin,
-            "destinations": destinations,
-            "year": year_route
-        }, "Analysing routes...")
-        if route_data and route_data.get("routes"):
-            st.success(
-                f"Safest: {route_data.get('safest_route', 'N/A')} | Riskiest: {route_data.get('riskiest_route', 'N/A')}"
-            )
-            df_routes = pd.DataFrame(route_data["routes"][:5])
-            st.dataframe(df_routes[['dest', 'risk_score', 'delay_rate']], use_container_width=True)
+    # Sidebar controls
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        airport = st.text_input("Airport Code", "JFK", key="disruption_airport").upper().strip()
+    with col2:
+        year = st.selectbox("Year", [2023, 2024], index=1, key="disruption_year")
+
+    if len(airport) == 3 and airport.isalpha():
+        data = safe_api_call(f"disruption-score/{airport}", {"year": year})
+        if data:
+            # HERO GAUGE (center stage)
+            st.markdown("---")
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                score = data.get('disruption_score', 0)
+                level = data.get('disruption_level', 'Unknown')
+                color = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}.get(level, "⚪")
+                st.metric(
+                    f"{color} {airport} Disruption Score",
+                    f"{score:.0f}/100",
+                    f"{data.get('vs_baseline', 'N/A')}"
+                )
+
+            # KEY METRICS ROW
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
+            col2.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
+            col3.metric("Avg Delay", f"{data.get('avg_delay', 0):.0f} min")
+
+            # STATUS & CAUSE
+            st.markdown("---")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.error(f"**Status**: {data.get('disruption_level', 'Unknown')}")
+                st.info(f"**Top Issue**: {data.get('top_delay_cause', 'N/A')}")
+            with col2:
+                st.caption(f"Period: {data.get('period_days', 365)} days")
+                st.caption(f"Total Flights: {data.get('total_flights', 'N/A')}")
+
+        else:
+            st.error("No disruption data available")
     else:
-        st.warning("Enter valid origin (3 letters) and destinations")
+        st.warning("Enter valid 3-letter airport code (JFK, LAX, SFO, etc.)")
+
+    # AIRPORT BENCHMARKS (Bonus!)
+    st.markdown("---")
+    st.markdown("### Airport Comparison")
+    benchmark_airports = ["LAX", "JFK", "SFO", "ORD"]
+    scores = []
+    for apt in benchmark_airports:
+        data = safe_api_call(f"disruption-score/{apt}", {"year": year})
+        if data:
+            scores.append({"airport": apt, "score": data.get('disruption_score', 0)})
+
+    if scores:
+        df = pd.DataFrame(scores)
+        st.bar_chart(df.set_index("airport")["score"], use_container_width=True)
 
 # BEST TIME TO FLY - Safe version
 if selected_view == "Best Time to Fly":
