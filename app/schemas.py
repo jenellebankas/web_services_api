@@ -1,7 +1,8 @@
 # app/schemas.py
-from pydantic import BaseModel, ConfigDict
-from typing import Optional, List
 from datetime import date, datetime
+from typing import Optional, List
+
+from pydantic import BaseModel, ConfigDict
 
 
 # ========== FLIGHT SCHEMAS ==========
@@ -35,6 +36,7 @@ class FlightBase(BaseModel):
 class FlightCreate(FlightBase):
     """Used when creating a new flight."""
     pass
+
 
 # -------- For PUT/PATCH / update --------
 

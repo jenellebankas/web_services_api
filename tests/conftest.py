@@ -1,9 +1,11 @@
-import pytest
 import sqlite3
 from pathlib import Path
+
+import pytest
 from fastapi.testclient import TestClient
-from app.main import app
+
 from app.database import SessionLocal, engine
+from app.main import app
 
 
 @pytest.fixture(scope="function")

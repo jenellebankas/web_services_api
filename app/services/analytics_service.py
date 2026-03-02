@@ -1,6 +1,8 @@
+from typing import List, Dict, Any
+
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+
 from app.schemas import (
     AirportComparisonItem, AirportComparisonResponse, AirportDelaysResponse,
     BestTimeItem, BestTimeResponse, DailyPatternResponse, DisruptionScoreResponse,

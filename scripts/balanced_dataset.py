@@ -1,13 +1,12 @@
 # scripts/seed_balanced_db.py
-import pandas as pd
-from datetime import datetime, timedelta, time
-from sqlalchemy.orm import Session
-from pathlib import Path
 import sys
+from datetime import datetime, timedelta, time
+from pathlib import Path
 
+import pandas as pd
+from sqlalchemy.orm import Session
 
 sys.path.append(str(Path(__file__).parent.parent))
-
 
 from app.database import SessionLocal, engine
 from app import models
@@ -148,13 +147,14 @@ def seed_balanced_flight_data(parquet_2023: str, parquet_2024: str,
                 weather_delay=int(row["weather_delay"]) if not pd.isna(row["weather_delay"]) else None,
                 nas_delay=int(row["nas_delay"]) if not pd.isna(row["nas_delay"]) else None,
                 security_delay=int(row["security_delay"]) if not pd.isna(row["security_delay"]) else None,
-                late_aircraft_delay=int(row["late_aircraft_delay"]) if not pd.isna(row["late_aircraft_delay"]) else None,
+                late_aircraft_delay=int(row["late_aircraft_delay"]) if not pd.isna(
+                    row["late_aircraft_delay"]) else None,
                 distance=int(row["distance"]) if not pd.isna(row["distance"]) else None,
             )
             db.add(flight)
 
         db.commit()
-        print(f"Seeded balanced dataset with {len(df):,} flights (≈{len(df)//2:,} per year)")
+        print(f"Seeded balanced dataset with {len(df):,} flights (≈{len(df) // 2:,} per year)")
     finally:
         db.close()
 

@@ -1,8 +1,9 @@
+import pandas as pd
+import plotly.express as px
 import streamlit as st
+
 from components import api
 from components import metrics
-import plotly.express as px
-import pandas as pd
 from components.metrics import DARK_THEME
 
 

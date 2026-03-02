@@ -1,10 +1,10 @@
 # scripts/seed_db.py
-import pandas as pd
-from datetime import datetime, timedelta, time
-from sqlalchemy.orm import Session
-from pathlib import Path
 import sys
+from datetime import datetime, timedelta, time
+from pathlib import Path
 
+import pandas as pd
+from sqlalchemy.orm import Session
 
 sys.path.append(str(Path(__file__).parent.parent))
 from app.database import SessionLocal, engine

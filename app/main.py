@@ -1,10 +1,11 @@
 # app/main.py
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine
+from fastapi.responses import RedirectResponse
+
 from app import models
 from app.api.v1.routers import flights, analytics
+from app.database import engine
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -38,6 +39,7 @@ async def root():
 @app.get("/dashboard")
 async def dashboard_redirect():
     return RedirectResponse(url="https://webservicesapi-dashboard.streamlit.app")
+
 
 app.include_router(flights.router, prefix="/api/v1/flights", tags=["flights"])
 app.include_router(analytics.router, prefix="/api/v1", tags=["analytics"])
