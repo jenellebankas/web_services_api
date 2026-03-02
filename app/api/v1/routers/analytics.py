@@ -11,7 +11,7 @@ router = APIRouter(prefix="/analytics", tags=["analytics"])
 # 1. AIRPORT DELAYS
 @router.get("/airport-delays/{airport}", response_model=AirportDelaysResponse)
 def get_airport_delays(
-        airport: str = Query(..., min_length=3, max_length=3),
+        airport: str,
         db: Session = Depends(get_db)
 ):
     airport = airport.strip().upper()
@@ -24,7 +24,7 @@ def get_airport_delays(
 # 2. DISRUPTION SCORE
 @router.get("/disruption-score/{airport}", response_model=DisruptionScoreResponse)
 def get_disruption_score(
-        airport: str = Query(..., min_length=3, max_length=3),
+        airport: str,
         year: int = Query(2024, ge=2023, le=2024),
         db: Session = Depends(get_db)
 ):
@@ -38,7 +38,7 @@ def get_disruption_score(
 # 3. YEAR OVER YEAR
 @router.get("/year-over-year/{airport}", response_model=YearOverYearResponse)
 def get_year_over_year(
-        airport: str = Query(..., min_length=3, max_length=3),
+        airport: str,
         db: Session = Depends(get_db)
 ):
     airport = airport.strip().upper()
@@ -108,7 +108,7 @@ def punctuality_leaderboard(
 # 8. BEST TIME
 @router.get("/best-time/{airport}", response_model=BestTimeResponse)
 def best_time_to_fly(
-        airport: str = Query(..., min_length=3, max_length=3),
+        airport: str,
         year: int = Query(2024, ge=2023, le=2024),
         top_n: int = Query(3, ge=1, le=10),
         db: Session = Depends(get_db)
