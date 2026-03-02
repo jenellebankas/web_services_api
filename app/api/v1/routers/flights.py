@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db
@@ -43,18 +43,21 @@ def get_flight(
 # 3. UPDATE FLIGHT
 @router.put("/{flight_id}", response_model=FlightRead)
 def update_flight(
-        flight_id: int = Query(..., gt=0),
-        flight_update: FlightUpdate,
-        db: Session = Depends(get_db)
+    flight_update: FlightUpdate,
+    flight_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db)
 ):
     """Update existing flight"""
     service = FlightService(db)
     try:
         return service.update_flight(flight_id, flight_update)
-    except ValueError:
-        raise HTTPException(status_code=404, detail="Flight not found")
+    except ValueError as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail="Flight not found")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Update failed")
+
 
 
 # 4. DELETE FLIGHT
