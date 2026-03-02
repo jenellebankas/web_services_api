@@ -168,8 +168,16 @@ if selected_view == "Single Airport Overview":
             best_hour = df_daily.loc[df_daily['delay_rate'].idxmin()]
             worst_hour = df_daily.loc[df_daily['delay_rate'].idxmax()]
             col1, col2 = st.columns(2)
-            col1.metric("Best Hour", f"{str(best_hour['hour']).replace('.',':')}0", f"{best_hour['delay_rate']:.1%}")
-            col2.metric("Worst Hour", f"{str(worst_hour['hour']).replace('.', ':')}0", f"{worst_hour['delay_rate']:.1%}")
+            col1.metric(
+                "Best Hour",
+                f"{str(best_hour['hour']).replace('.', ':')}0",
+                f"{best_hour['delay_rate']:.1%}"
+            )
+            col2.metric(
+                "Worst Hour",
+                f"{str(worst_hour['hour']).replace('.', ':')}0",
+                f"{worst_hour['delay_rate']:.1%}"
+            )
 
         # WEEKLY PATTERNS → CHART (NEW)
         st.markdown("### Weekly Delay Patterns")
@@ -193,43 +201,18 @@ if selected_view == "Single Airport Overview":
             col2.metric("Best Day", best_day['dow'], f"{best_day['delay_rate_pct']:.1f}%")
 
 if selected_view == "Disruption Score":
-    st.markdown("### Recent Airport Disruption Score")
+    st.markdown("### Airport Disruption Score (by Year)")
     airport = st.text_input("Airport", "JFK", key="disruption_airport").upper()
-    days = st.slider("Lookback days", 3, 30, 7, key="disruption_days")
+    year = st.selectbox("Year", [2023, 2024], index=1, key="disruption_year")
 
     if airport:
-        with st.spinner(f"Analyzing {airport} disruption..."):
-            disruption_data = api.fetch(f"disruption-score/{airport}", {"days": days})
-
-        if disruption_data:
-            # Main score gauge
-            col1, col2, col3 = st.columns([2, 1, 2])
-            with col1:
-                st.metric(
-                    f"{airport} Disruption",
-                    f"{disruption_data['disruption_score']:.0f}/100",
-                    disruption_data['disruption_level']
-                )
-
-            with col2:
-                level_color = {"Low": "#4caf50", "Medium": "#ff9800", "High": "#f44336"}
-                st.markdown(f"""
-                <div style="background: {level_color.get(disruption_data['disruption_level'], '#ccc')};
-                           color: white; padding: 1.5rem; border-radius: 10px; 
-                           text-align: center; font-weight: bold; font-size: 1.3rem;">
-                {disruption_data['disruption_level']}
-                </div>
-                """, unsafe_allow_html=True)
-
-            with col3:
-                st.caption(f"Last {disruption_data['period_days']} days vs 90-day baseline")
-                st.caption(disruption_data['vs_baseline'])
-
-            # Factor breakdown table
-            st.markdown("### Disruption Factors")
-            factors_df = pd.DataFrame(list(disruption_data.get('factors', {}).items()),
-                                      columns=['Metric', 'Value']).T
-            st.dataframe(factors_df.style, use_container_width=True)
+        data = api.fetch(f"disruption-score/{airport}", {"year": year})
+        if data:
+            st.metric(f"{airport} Disruption", f"{data['disruption_score']:.0f}/100")
+            col1, col2 = st.columns(2)
+            col1.metric("Delay Frequency", f"{data['delay_frequency']*100:.1f}%")
+            col2.metric("Cancel Frequency", f"{data['cancel_frequency']*100:.1f}%")
+            st.caption(f"Compared against {year-1} where available")
 
 if selected_view == "Route Risk":
 
