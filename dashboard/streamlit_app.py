@@ -195,7 +195,7 @@ if selected_view == "Disruption Score":
         if data:
             # HERO GAUGE (center stage)
             st.markdown("---")
-            col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+            col1, col2, col3 = st.columns([1, 1, 1])
             score = data.get('disruption_score', 0)
             level = data.get('disruption_level', 'Unknown')
             color = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}.get(level, "⚪")
@@ -208,7 +208,6 @@ if selected_view == "Disruption Score":
             )
             col2.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
             col3.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
-            col4.metric("Avg Delay", f"{data.get('avg_delay', 0):.0f} min")
 
             # STATUS & CAUSE
             st.markdown("---")
