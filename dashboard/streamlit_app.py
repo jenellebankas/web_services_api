@@ -195,33 +195,28 @@ if selected_view == "Disruption Score":
         if data:
             # HERO GAUGE (center stage)
             st.markdown("---")
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col2:
-                score = data.get('disruption_score', 0)
-                level = data.get('disruption_level', 'Unknown')
-                color = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}.get(level, "⚪")
-                st.metric(
-                    f"{color} {airport} Disruption Score",
-                    f"{score:.0f}/100",
-                    f"{data.get('vs_baseline', 'N/A')}"
-                )
+            col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+            score = data.get('disruption_score', 0)
+            level = data.get('disruption_level', 'Unknown')
+            color = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}.get(level, "⚪")
 
             # KEY METRICS ROW
-            col1, col2, col3 = st.columns(3)
             col1.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
             col2.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
             col3.metric("Avg Delay", f"{data.get('avg_delay', 0):.0f} min")
+            col4.metric(
+                f"{color} {airport} Disruption Score",
+                f"{score:.0f}/100",
+                f"{data.get('vs_baseline', 'N/A')}"
+            )
 
-            # ⚠STATUS & CAUSE
+            # STATUS & CAUSE
             st.markdown("---")
             col1, col2 = st.columns(2)
             with col1:
                 st.error(f"**Status**: {data.get('disruption_level', 'Unknown')}")
-                st.info(f"**Top Issue**: {data.get('top_delay_cause', 'N/A')}")
             with col2:
-                st.caption(f"Period: {data.get('period_days', 365)} days")
-                st.caption(f"Total Flights: {data.get('total_flights', 'N/A')}")
-
+                st.info(f"**Top Issue**: {data.get('top_delay_cause', 'N/A')}")
         else:
             st.error("No disruption data available")
     else:
