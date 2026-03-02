@@ -29,7 +29,7 @@ def create_flight(
 # 2. GET SINGLE FLIGHT
 @router.get("/{flight_id}", response_model=FlightRead)
 def get_flight(
-        flight_id: int = Query(..., gt=0),  # Must be positive integer
+        flight_id: int,
         db: Session = Depends(get_db)
 ):
     """Get flight by ID"""
@@ -62,7 +62,7 @@ def update_flight(
 # 4. DELETE FLIGHT
 @router.delete("/{flight_id}", status_code=204)
 def delete_flight(
-        flight_id: int = Query(..., gt=0),
+        flight_id: int,
         db: Session = Depends(get_db)
 ):
     """Delete flight by ID"""
