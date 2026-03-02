@@ -201,14 +201,14 @@ if selected_view == "Disruption Score":
             color = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}.get(level, "⚪")
 
             # KEY METRICS ROW
-            col1.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
-            col2.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
-            col3.metric("Avg Delay", f"{data.get('avg_delay', 0):.0f} min")
-            col4.metric(
+            col1.metric(
                 f"{color} {airport} Disruption Score",
                 f"{score:.0f}/100",
                 f"{data.get('vs_baseline', 'N/A')}"
             )
+            col2.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
+            col3.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
+            col4.metric("Avg Delay", f"{data.get('avg_delay', 0):.0f} min")
 
             # STATUS & CAUSE
             st.markdown("---")
@@ -234,7 +234,11 @@ if selected_view == "Disruption Score":
 
     if scores:
         df = pd.DataFrame(scores)
-        st.bar_chart(df.set_index("airport")["score"], use_container_width=True)
+        st.bar_chart(
+            df.set_index("airport")["score"],
+            use_container_width=True,
+            colors=['#059669', '#10B981', '#34D399', '#6EE7B7']
+        )
 
 # ROUTE RISK - Safe version
 if selected_view == "Route Risk":
