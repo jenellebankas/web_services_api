@@ -179,9 +179,9 @@ if selected_view == "Single Airport Overview":
     else:
         st.warning("Enter a valid 3-letter airport code (JFK, LAX, ORD, etc.)")
 
-# ROUTE RISK - Safe version
+# DISRUPTION SCORE - Safe version
 if selected_view == "Disruption Score":
-    st.markdown("### Airport Disruption")
+    st.markdown("### Airport Disruption Score Dashboard")
 
     # Sidebar controls
     col1, col2 = st.columns([2, 1])
@@ -207,11 +207,12 @@ if selected_view == "Disruption Score":
                 )
 
             # KEY METRICS ROW
+            col1, col2, col3 = st.columns(3)
             col1.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
             col2.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
             col3.metric("Avg Delay", f"{data.get('avg_delay', 0):.0f} min")
 
-            # STATUS & CAUSE
+            # ⚠STATUS & CAUSE
             st.markdown("---")
             col1, col2 = st.columns(2)
             with col1:
@@ -226,7 +227,7 @@ if selected_view == "Disruption Score":
     else:
         st.warning("Enter valid 3-letter airport code (JFK, LAX, SFO, etc.)")
 
-    # AIRPORT BENCHMARKS (Bonus!)
+    # 📈 AIRPORT BENCHMARKS (Bonus!)
     st.markdown("---")
     st.markdown("### Airport Comparison")
     benchmark_airports = ["LAX", "JFK", "SFO", "ORD"]
@@ -239,6 +240,28 @@ if selected_view == "Disruption Score":
     if scores:
         df = pd.DataFrame(scores)
         st.bar_chart(df.set_index("airport")["score"], use_container_width=True)
+
+# ROUTE RISK - Safe version
+if selected_view == "Route Risk":
+    st.markdown("### Route Risk Analysis")
+    year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
+    origin = st.text_input("Origin Airport", "JFK", key="route_origin").upper().strip()
+    destinations = st.text_input("Destinations (comma-separated)", "LAX,ORD,ATL", key="route_destinations").strip()
+
+    if len(origin) == 3 and origin.isalpha() and destinations:
+        route_data = safe_api_call("route-risk", {
+            "origin": origin,
+            "destinations": destinations,
+            "year": year_route
+        }, "Analysing routes...")
+        if route_data and route_data.get("routes"):
+            st.success(
+                f"Safest: {route_data.get('safest_route', 'N/A')} | Riskiest: {route_data.get('riskiest_route', 'N/A')}"
+            )
+            df_routes = pd.DataFrame(route_data["routes"][:5])
+            st.dataframe(df_routes[['dest', 'risk_score', 'delay_rate']], use_container_width=True)
+    else:
+        st.warning("Enter valid origin (3 letters) and destinations")
 
 # BEST TIME TO FLY - Safe version
 if selected_view == "Best Time to Fly":
