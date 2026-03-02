@@ -207,7 +207,7 @@ if selected_view == "Route Risk":
             "origin": origin,
             "destinations": destinations,
             "year": year_route
-        }, "Analyzing routes...")
+        }, "Analysing routes...")
         if route_data and route_data.get("routes"):
             st.success(
                 f"Safest: {route_data.get('safest_route', 'N/A')} | Riskiest: {route_data.get('riskiest_route', 'N/A')}"

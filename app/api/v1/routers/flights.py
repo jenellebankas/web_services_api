@@ -96,7 +96,7 @@ def read_flights(
 # 6. AIRPORT STATS
 @router.get("/stats/{airport}")
 def airport_stats(
-        airport: str = Query(..., min_length=3, max_length=3),
+        airport: str,
         db: Session = Depends(get_db)
 ):
     """Airport performance statistics"""
