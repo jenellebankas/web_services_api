@@ -25,7 +25,7 @@ def get_airport_delays(
 @router.get("/disruption-score/{airport}", response_model=DisruptionScoreResponse)
 def get_disruption_score(
         airport: str,
-        year: int = Query(2024, ge=2023, le=2024),
+        year: int,
         db: Session = Depends(get_db)
 ):
     airport = airport.strip().upper()
@@ -109,8 +109,8 @@ def punctuality_leaderboard(
 @router.get("/best-time/{airport}", response_model=BestTimeResponse)
 def best_time_to_fly(
         airport: str,
-        year: int = Query(2024, ge=2023, le=2024),
-        top_n: int = Query(3, ge=1, le=10),
+        year: int,
+        top_n: int,
         db: Session = Depends(get_db)
 ):
     airport = airport.strip().upper()
