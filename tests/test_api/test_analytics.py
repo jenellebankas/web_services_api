@@ -9,7 +9,9 @@ def test_airport_delays_lax(client):
 
 
 def test_disruption_score(client):
-    response = client.get("/api/v1/analytics/disruption-score/LAX")
+
+    response = client.get("api/v1/analytics/disruption-score/JFK?year=2023")
+
     assert response.status_code == 200
     data = response.json()
     assert "disruption_score" in data
@@ -21,4 +23,5 @@ def test_year_over_year(client):
     assert response.status_code == 200
     data = response.json()
     assert "airport" in data
-    assert "current_year_delay_rate" in data
+    assert "year_2023" in data
+    assert "year_2024" in data

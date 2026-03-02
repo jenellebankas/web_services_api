@@ -111,7 +111,7 @@ class FlightService:
             query = query.filter(models.Flight.dest == dest)
 
         flights = query.offset(offset).limit(limit).all()
-        return [FlightRead.from_orm(f) for f in flights]
+        return [FlightRead.model_validate(f) for f in flights]
 
     def get_airport_stats(self, airport: str) -> Dict[str, Any]:
         """Airport performance statistics"""
