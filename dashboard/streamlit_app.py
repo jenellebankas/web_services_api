@@ -63,7 +63,7 @@ st.title("Flight Disruption Analytics")
 
 # SYSTEM OVERVIEW - Safe version
 if selected_view == "System Overview":
-    tab1, tab2, tab3 = st.tabs(["Leaderboard", "Carrier Performance", "Time Patterns"])
+    tab1, tab2, tab3 = st.tabs(["Leaderboard", "Carrier & Airport Performance", "Time Patterns"])
 
     with tab1:
         st.markdown("## System-Wide Analytics")
@@ -156,8 +156,6 @@ if selected_view == "Single Airport Overview":
                 best_hour = df_daily.loc[df_daily['delay_rate'].idxmin()]
                 worst_hour = df_daily.loc[df_daily['delay_rate'].idxmax()]
                 col1, col2 = st.columns(2)
-                col1.metric("Best Hour", f"{int(best_hour['hour'])}:00", f"{best_hour['delay_rate']:.1%}")
-                col2.metric("Worst Hour", f"{int(worst_hour['hour'])}:00", f"{worst_hour['delay_rate']:.1%}")
 
         # Weekly patterns
         st.markdown("### Weekly Delay Patterns")
@@ -212,7 +210,8 @@ if selected_view == "Route Risk":
         }, "Analyzing routes...")
         if route_data and route_data.get("routes"):
             st.success(
-                f"Safest: {route_data.get('safest_route', 'N/A')} | Riskiest: {route_data.get('riskiest_route', 'N/A')}")
+                f"Safest: {route_data.get('safest_route', 'N/A')} | Riskiest: {route_data.get('riskiest_route', 'N/A')}"
+            )
             df_routes = pd.DataFrame(route_data["routes"][:5])
             st.dataframe(df_routes[['dest', 'risk_score', 'delay_rate']], use_container_width=True)
     else:
