@@ -234,9 +234,11 @@ if selected_view == "Disruption Score":
 
     if scores:
         df = pd.DataFrame(scores)
+
         st.bar_chart(
             df.set_index("airport")["score"],
-            use_container_width=True
+            use_container_width=True,
+            color=['#059669', '#10B981', '#34D399', '#6EE7B7']
         )
 
 # ROUTE RISK - Safe version
