@@ -5,9 +5,22 @@ import plotly.express as px
 import pandas as pd
 from components.metrics import DARK_THEME
 
+
+# Add safe API wrapper
+def safe_api_call(endpoint: str, params: dict = None, spinner_text: str = "Loading..."):
+    """Safe API call with proper error handling"""
+    try:
+        with st.spinner(spinner_text):
+            return api.fetch(endpoint, params or {})
+    except Exception as e:
+        st.error(f"API Error: {str(e)}")
+        st.info("Try a different airport/year or check server status")
+        return None
+
+
 st.set_page_config(page_title="Flight Analytics", page_icon="✈️", layout="wide")
 
-# Apply theme
+# Apply theme (unchanged)
 st.markdown(f"""
 <style>
 :root {{
@@ -22,10 +35,6 @@ h1,h2,h3 {{ color: {DARK_THEME["accent"]}!important; }}
 </style>
 """, unsafe_allow_html=True)
 
-# Source - https://stackoverflow.com/a/74281694
-# Posted by sumshyftw
-# Retrieved 2026-02-27, License - CC BY-SA 4.0
-
 no_sidebar_style = """
     <style>
         div[data-testid="stSidebarNav"] {display: none;}
@@ -33,6 +42,7 @@ no_sidebar_style = """
 """
 st.markdown(no_sidebar_style, unsafe_allow_html=True)
 
+# Sidebar (unchanged)
 with st.sidebar:
     st.header("Airport analytics")
     selected_view = st.radio(
@@ -48,207 +58,186 @@ with st.sidebar:
         key="nav_view",
     )
 
-
-# Header
 st.title("Flight Disruption Analytics")
 
+# SYSTEM OVERVIEW - Safe version
 if selected_view == "System Overview":
-    # Main content tabs
     tab1, tab2, tab3 = st.tabs(["Leaderboard", "Carrier Performance", "Time Patterns"])
 
     with tab1:
         st.markdown("## System-Wide Analytics")
+        system_data = safe_api_call("system-overview", spinner_text="Loading system stats...")
 
-        col1, col2, col3, col4 = st.columns(4)
-        system_data = api.fetch("system-overview")
         if system_data:
-            metrics.metric_card("Total Flights (US)", f"{system_data['total_flights']:,}", col1)
-            metrics.metric_card("Industry Avg Delay", f"{system_data['avg_delay_minutes']:.1f} min", col2)
-            metrics.metric_card("National Delay Rate", f"{system_data['national_delay_rate'] * 100:.1f}%", col3)
-            metrics.metric_card("Total Cancellations", f"{system_data['total_cancellations']:,}", col4)
-        else:
-            st.warning("System overview loading...")
+            col1, col2, col3, col4 = st.columns(4)
+            metrics.metric_card("Total Flights (US)", f"{system_data.get('total_flights', 0):,}", col1)
+            metrics.metric_card("Industry Avg Delay", f"{system_data.get('avg_delay_minutes', 0):.1f} min", col2)
+            metrics.metric_card("National Delay Rate", f"{system_data.get('national_delay_rate', 0) * 100:.1f}%", col3)
+            metrics.metric_card("Total Cancellations", f"{system_data.get('total_cancellations', 0):,}", col4)
 
         st.markdown("## Punctuality Leaderboard")
-
         year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="main_year")
-        data = api.fetch("leaderboard/punctuality", {"year": year})
-        if data:
+        leaderboard_data = safe_api_call("leaderboard/punctuality", {"year": year})
+
+        if leaderboard_data and leaderboard_data.get("top_airports"):
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown("### Top 10 Airports")
-                pd.DataFrame(data["top_airports"]).style.background_gradient(cmap='Greens')
-                st.dataframe(pd.DataFrame(data["top_airports"]), use_container_width=True)
+                st.dataframe(pd.DataFrame(leaderboard_data["top_airports"]), use_container_width=True)
             with col2:
                 st.markdown("### Bottom 10 Airports")
-                st.dataframe(pd.DataFrame(data["bottom_airports"]), use_container_width=True)
+                st.dataframe(pd.DataFrame(leaderboard_data["bottom_airports"]), use_container_width=True)
+        elif not leaderboard_data:
+            st.info("No leaderboard data available")
 
     with tab2:
-
-        # Row 2: Year-over-Year Airport Comparison
         st.markdown("### Compare Airport Performance")
-        airports_input = st.text_input("Airports", "JFK,LAX,ORD", key="compare_airports")
+        airports_input = st.text_input("Airports (comma-separated)", "JFK,LAX,ORD", key="compare_airports")
         compare_year = st.selectbox("Year", [2023, 2024], index=1, key="compare_year")
 
-        if airports_input:
-            compare_data = api.fetch("compare-airports", {
-                "airports": airports_input,
+        if airports_input.strip():
+            compare_data = safe_api_call("compare-airports", {
+                "airports": airports_input.strip(),
                 "year": compare_year
-            })
-            if compare_data:
+            }, "Comparing airports...")
+            if compare_data and compare_data.get("airports"):
                 df_compare = pd.DataFrame(compare_data["airports"])
-                st.dataframe(
-                    df_compare.style.background_gradient(cmap='RdYlGn_r', subset=['delay_rate']),
-                    use_container_width=True
-                )
+                st.dataframe(df_compare, use_container_width=True)
 
-        # 2. TOP CARRIER PERFORMANCE (Network-wide)
         st.markdown("### Carrier Performance Ranking")
-        carrier_data = api.fetch("carrier-performance", {"year": compare_year})  # Pass year param
+        carrier_data = safe_api_call("carrier-performance", {"year": compare_year})
         if carrier_data:
             df_carriers = pd.DataFrame(carrier_data)
             fig_carrier = px.bar(df_carriers.head(10), x="carrier", y="otp_pct",
                                  title="Top Carriers by On-Time Performance",
                                  color_discrete_sequence=["#4caf50"])
             st.plotly_chart(fig_carrier, use_container_width=True)
-        else:
-            st.info("Carrier data loading...")
 
     with tab3:
-
         st.markdown("### Monthly Disruption Trends")
         trends_year = st.selectbox("Year", [2023, 2024], index=1, label_visibility="collapsed", key="tab3_year")
-        monthly_data = api.fetch("monthly-trends", {"year": trends_year})
-
+        monthly_data = safe_api_call("monthly-trends", {"year": trends_year})
         if monthly_data:
             df_monthly = pd.DataFrame(monthly_data)
-
             fig = px.line(df_monthly, x="period", y=["delay_rate", "cancel_rate"],
-                          title=f"Disruption Trends {year}",
-                          color_discrete_sequence=["#68a368", "#a8d0a8"],
-                          labels={'value': 'Rate', 'period': 'Month'})
-
-            fig.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font_color="#e8f0e8",
-                title_font_color="#68a368"
-            )
+                          title=f"Disruption Trends {trends_year}",
+                          color_discrete_sequence=["#68a368", "#a8d0a8"])
+            fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("Monthly trends loading...")
 
+# SINGLE AIRPORT OVERVIEW - Safe version
 if selected_view == "Single Airport Overview":
-    # COMMON INPUTS (batch at top)
-    airport = st.text_input("Airport", "JFK", key="overview_airport").upper()
+    airport = st.text_input("Airport", "JFK", key="overview_airport").upper().strip()
     analysis_year = st.selectbox("Year", [2023, 2024], index=1, key="overview_year")
 
-    if airport:
-        # AIRPORT METRICS (existing - perfect)
-        data = api.fetch(f"airport-delays/{airport}")
-        if data:
+    if len(airport) == 3 and airport.isalpha():
+        # Airport metrics
+        airport_data = safe_api_call(f"airport-delays/{airport}", spinner_text=f"Loading {airport} stats...")
+        if airport_data:
             col1, col2, col3, col4 = st.columns(4)
-            metrics.metric_card("Total Flights", f"{data['total_flights']:,}", col1)
-            metrics.metric_card("Avg Delay", f"{data['avg_arrival_delay']:.1f}min", col2)
-            metrics.metric_card("Delay Rate", f"{data['delay_rate'] * 100:.1f}%", col3)
-            metrics.metric_card("Cancel Rate", f"{data['cancel_rate'] * 100:.1f}%", col4)
+            metrics.metric_card("Total Flights", f"{airport_data.get('total_flights', 0):,}", col1)
+            metrics.metric_card("Avg Delay", f"{airport_data.get('avg_arrival_delay', 0):.1f}min", col2)
+            metrics.metric_card("Delay Rate", f"{airport_data.get('delay_rate', 0) * 100:.1f}%", col3)
+            metrics.metric_card("Cancel Rate", f"{airport_data.get('cancel_rate', 0) * 100:.1f}%", col4)
 
-        # DAILY PATTERNS → CHART (NEW)
+        # Daily patterns
         st.markdown("### Daily Delay Patterns")
-        daily_data = api.fetch("daily-pattern", {"airport": airport, "year": analysis_year})
-        if daily_data and daily_data["hours"]:
+        daily_data = safe_api_call("daily-pattern", {"airport": airport, "year": analysis_year})
+        if daily_data and daily_data.get("hours"):
             df_daily = pd.DataFrame(daily_data["hours"])
-            fig_daily = px.line(df_daily, x="hour", y="delay_rate",
-                                title=f"{airport} Hourly Delay Rate ({analysis_year})",
-                                markers=True, color_discrete_sequence=["#4caf50"])
-            fig_daily.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_daily, use_container_width=True)
+            if not df_daily.empty:
+                fig_daily = px.line(df_daily, x="hour", y="delay_rate",
+                                    title=f"{airport} Hourly Delay Rate ({analysis_year})",
+                                    markers=True, color_discrete_sequence=["#4caf50"])
+                fig_daily.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_daily, use_container_width=True)
 
-            # Daily best/worst
-            best_hour = df_daily.loc[df_daily['delay_rate'].idxmin()]
-            worst_hour = df_daily.loc[df_daily['delay_rate'].idxmax()]
-            col1, col2 = st.columns(2)
-            col1.metric(
-                "Best Hour",
-                f"{str(best_hour['hour']).replace('.', ':')}0",
-                f"{best_hour['delay_rate']:.1%}"
-            )
-            col2.metric(
-                "Worst Hour",
-                f"{str(worst_hour['hour']).replace('.', ':')}0",
-                f"{worst_hour['delay_rate']:.1%}"
-            )
+                best_hour = df_daily.loc[df_daily['delay_rate'].idxmin()]
+                worst_hour = df_daily.loc[df_daily['delay_rate'].idxmax()]
+                col1, col2 = st.columns(2)
+                col1.metric("Best Hour", f"{int(best_hour['hour'])}:00", f"{best_hour['delay_rate']:.1%}")
+                col2.metric("Worst Hour", f"{int(worst_hour['hour'])}:00", f"{worst_hour['delay_rate']:.1%}")
 
-        # WEEKLY PATTERNS → CHART (NEW)
+        # Weekly patterns
         st.markdown("### Weekly Delay Patterns")
-        weekly_data = api.fetch("weekly-pattern", {"airport": airport, "year": analysis_year})
-        if weekly_data and weekly_data["days"]:
+        weekly_data = safe_api_call("weekly-pattern", {"airport": airport, "year": analysis_year})
+        if weekly_data and weekly_data.get("days"):
             df_weekly = pd.DataFrame(weekly_data["days"])
-            df_weekly['delay_rate_pct'] = df_weekly['delay_rate'] * 100
+            if not df_weekly.empty:
+                df_weekly['delay_rate_pct'] = df_weekly['delay_rate'] * 100
+                fig_weekly = px.bar(df_weekly, x="dow", y="delay_rate_pct",
+                                    title=f"{airport} Weekly Delay Rates ({analysis_year})",
+                                    color_discrete_sequence=["#66bb6a"], text="delay_rate_pct")
+                fig_weekly.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+                fig_weekly.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_weekly, use_container_width=True)
 
-            fig_weekly = px.bar(df_weekly, x="dow", y="delay_rate_pct",
-                                title=f"{airport} Weekly Delay Rates ({analysis_year})",
-                                color_discrete_sequence=["#66bb6a"], text="delay_rate_pct")
-            fig_weekly.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-            fig_weekly.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_weekly, use_container_width=True)
+                worst_day = df_weekly.loc[df_weekly['delay_rate_pct'].idxmax()]
+                best_day = df_weekly.loc[df_weekly['delay_rate_pct'].idxmin()]
+                col1, col2 = st.columns(2)
+                col1.metric("Worst Day", worst_day['dow'], f"{worst_day['delay_rate_pct']:.1f}%")
+                col2.metric("Best Day", best_day['dow'], f"{best_day['delay_rate_pct']:.1f}%")
+    else:
+        st.warning("Enter a valid 3-letter airport code (JFK, LAX, ORD, etc.)")
 
-            # Weekly best/worst
-            worst_day = df_weekly.loc[df_weekly['delay_rate_pct'].idxmax()]
-            best_day = df_weekly.loc[df_weekly['delay_rate_pct'].idxmin()]
-            col1, col2 = st.columns(2)
-            col1.metric("Worst Day", worst_day['dow'], f"{worst_day['delay_rate_pct']:.1f}%")
-            col2.metric("Best Day", best_day['dow'], f"{best_day['delay_rate_pct']:.1f}%")
-
+# DISRUPTION SCORE - Safe version
 if selected_view == "Disruption Score":
-    st.markdown("### Airport Disruption Score (by Year)")
-    airport = st.text_input("Airport", "JFK", key="disruption_airport").upper()
+    st.markdown("### Airport Disruption Score")
+    airport = st.text_input("Airport", "JFK", key="disruption_airport").upper().strip()
     year = st.selectbox("Year", [2023, 2024], index=1, key="disruption_year")
 
-    if airport:
-        data = api.fetch(f"disruption-score/{airport}", {"year": year})
+    if len(airport) == 3 and airport.isalpha():
+        data = safe_api_call(f"disruption-score/{airport}", {"year": year})
         if data:
-            st.metric(f"{airport} Disruption", f"{data['disruption_score']:.0f}/100")
+            st.metric(f"{airport} Disruption", f"{data.get('disruption_score', 0):.0f}/100")
             col1, col2 = st.columns(2)
-            col1.metric("Delay Frequency", f"{data['delay_frequency']*100:.1f}%")
-            col2.metric("Cancel Frequency", f"{data['cancel_frequency']*100:.1f}%")
-            st.caption(f"Compared against {year-1} where available")
+            col1.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
+            col2.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
+    else:
+        st.warning("Enter a valid 3-letter airport code")
 
+# ROUTE RISK - Safe version
 if selected_view == "Route Risk":
-
-    st.markdown("### Route Risk")
+    st.markdown("### Route Risk Analysis")
     year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
-    origin = st.text_input("Origin", "JFK", key="route_origin").upper()
-    destinations = st.text_input("Destinations", "LAX,ORD,ATL", key="route_destinations")
+    origin = st.text_input("Origin Airport", "JFK", key="route_origin").upper().strip()
+    destinations = st.text_input("Destinations (comma-separated)", "LAX,ORD,ATL", key="route_destinations").strip()
 
-    if origin and destinations:
-        route_data = api.fetch("route-risk", {"origin": origin, "destinations": destinations, "year": year_route})
-        if route_data:
-            st.success(f"**Safest:** {route_data['safest_route']} | **Riskiest:** {route_data['riskiest_route']}")
-
-            # Top 3 safest routes
-            df_routes = pd.DataFrame(route_data["routes"][:3])
+    if len(origin) == 3 and origin.isalpha() and destinations:
+        route_data = safe_api_call("route-risk", {
+            "origin": origin,
+            "destinations": destinations,
+            "year": year_route
+        }, "Analyzing routes...")
+        if route_data and route_data.get("routes"):
+            st.success(
+                f"Safest: {route_data.get('safest_route', 'N/A')} | Riskiest: {route_data.get('riskiest_route', 'N/A')}")
+            df_routes = pd.DataFrame(route_data["routes"][:5])
             st.dataframe(df_routes[['dest', 'risk_score', 'delay_rate']], use_container_width=True)
+    else:
+        st.warning("Enter valid origin (3 letters) and destinations")
 
+# BEST TIME TO FLY - Safe version
 if selected_view == "Best Time to Fly":
-
-    st.markdown("### Best Time to Fly")
+    st.markdown("### Best Time Analysis")
     year_best = st.selectbox("Year", [2023, 2024], index=1, key="best_time_year")
-    airport = st.text_input("Airport", "JFK", key="best_time_airport").upper()
+    airport = st.text_input("Airport", "JFK", key="best_time_airport").upper().strip()
 
-    if airport:
-        best_data = api.fetch(f"best-time/{airport}", {"year": year_best})
+    if len(airport) == 3 and airport.isalpha():
+        best_data = safe_api_call(f"best-time/{airport}", {"year": year_best})
         if best_data:
-            st.success(best_data["insight"])
-
-            # Best vs Worst hours table
-            col_best1, col_best2 = st.columns(2)
-            best_df = pd.DataFrame(best_data["best_hours"])
-            worst_df = pd.DataFrame(best_data["worst_hours"])
-
-            with col_best1:
-                st.metric("Best Hour", f"{str(best_df.iloc[0]['hour']).replace('.', ':')}0")
-                st.metric("Delay Risk", f"{best_df.iloc[0]['delay_rate'] * 100:.1f}%")
-            with col_best2:
-                st.metric("Worst Hour", f"{str(worst_df.iloc[0]['hour']).replace('.', ':')}0")
-                st.metric("Delay Risk", f"{worst_df.iloc[0]['delay_rate'] * 100:.1f}%")
+            st.success(best_data.get("insight", "Analysis complete"))
+            if best_data.get("best_hours") and best_data.get("worst_hours"):
+                best_df = pd.DataFrame(best_data["best_hours"])
+                worst_df = pd.DataFrame(best_data["worst_hours"])
+                col1, col2 = st.columns(2)
+                with col1:
+                    best_hour = best_df.iloc[0]
+                    st.metric("Best Hour", f"{int(best_hour['hour'])}:00")
+                    st.metric("Delay Risk", f"{best_hour['delay_rate'] * 100:.1f}%")
+                with col2:
+                    worst_hour = worst_df.iloc[0]
+                    st.metric("Worst Hour", f"{int(worst_hour['hour'])}:00")
+                    st.metric("Delay Risk", f"{worst_hour['delay_rate'] * 100:.1f}%")
+    else:
+        st.warning("Enter a valid 3-letter airport code")
