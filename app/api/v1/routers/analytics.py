@@ -110,7 +110,7 @@ def punctuality_leaderboard(
 def best_time_to_fly(
         airport: str,
         year: int,
-        top_n: Optional[int],
+        top_n: int = Query(3, ge=1, le=10),
         db: Session = Depends(get_db)
 ):
     airport = airport.strip().upper()
