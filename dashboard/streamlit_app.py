@@ -179,22 +179,6 @@ if selected_view == "Single Airport Overview":
     else:
         st.warning("Enter a valid 3-letter airport code (JFK, LAX, ORD, etc.)")
 
-# DISRUPTION SCORE - Safe version
-if selected_view == "Disruption Score":
-    st.markdown("### Airport Disruption Score")
-    airport = st.text_input("Airport", "JFK", key="disruption_airport").upper().strip()
-    year = st.selectbox("Year", [2023, 2024], index=1, key="disruption_year")
-
-    if len(airport) == 3 and airport.isalpha():
-        data = safe_api_call(f"disruption-score/{airport}", {"year": year})
-        if data:
-            st.metric(f"{airport} Disruption", f"{data.get('disruption_score', 0):.0f}/100")
-            col1, col2 = st.columns(2)
-            col1.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
-            col2.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
-    else:
-        st.warning("Enter a valid 3-letter airport code")
-
 # ROUTE RISK - Safe version
 if selected_view == "Disruption Score":
     st.markdown("### Airport Disruption")
@@ -223,7 +207,6 @@ if selected_view == "Disruption Score":
                 )
 
             # KEY METRICS ROW
-            col1, col2, col3 = st.columns(3)
             col1.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
             col2.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
             col3.metric("Avg Delay", f"{data.get('avg_delay', 0):.0f} min")
