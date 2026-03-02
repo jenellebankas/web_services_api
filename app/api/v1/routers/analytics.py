@@ -14,8 +14,12 @@ def get_airport_delays(airport: str, db: Session = Depends(get_db)):
 
 
 @router.get("/disruption-score/{airport}", response_model=DisruptionScoreResponse)
-def get_disruption_score(airport: str, days: int = Query(7, ge=1, le=30), db: Session = Depends(get_db)):
-    return AnalyticsService(db).get_disruption_score(airport, days)
+def get_disruption_score(
+    airport: str,
+    year: int = Query(2024, ge=2023, le=2024),
+    db: Session = Depends(get_db),
+):
+    return AnalyticsService(db).get_disruption_score(airport, year)
 
 
 @router.get("/year-over-year/{airport}", response_model=YearOverYearResponse)

@@ -39,44 +39,74 @@ class AnalyticsService:
             worst_day="Monday"
         )
 
-    def get_disruption_score(self, airport: str, days: int = 7) -> DisruptionScoreResponse:
-        recent = self.db.execute(text("""
-            SELECT AVG(arr_delay_minutes) recent_avg, AVG(CASE WHEN arr_del_15=1 THEN 1 ELSE 0 END) recent_rate,
-                   AVG(cancelled) recent_cancel, COUNT(*) recent_n, COUNT(DISTINCT reporting_airline) carriers
-            FROM flights WHERE origin=:airport AND flight_date >= date('now', '-:days days')
-        """), {"airport": airport, "days": days}).fetchone()
+    def get_disruption_score(self, airport: str, year: int = 2024) -> DisruptionScoreResponse:
+        # Current year stats
+        current = self.db.execute(text("""
+            SELECT 
+                COUNT(*) AS total,
+                COALESCE(AVG(arr_delay_minutes), 0) AS avg_delay,
+                SUM(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END) AS delayed,
+                SUM(cancelled) AS cancelled
+            FROM flights
+            WHERE origin = :airport
+              AND strftime('%Y', flight_date) = :year
+        """), {"airport": airport, "year": str(year)}).fetchone()
 
-        baseline = self.db.execute(text("""
-            SELECT AVG(arr_delay_minutes) base_avg, AVG(CASE WHEN arr_del_15=1 THEN 1 ELSE 0 END) base_rate
-            FROM flights WHERE origin=:airport AND flight_date >= date('now', '-90 days')
-        """), {"airport": airport}).fetchone()
+        # Previous year stats (if available)
+        prev_year = year - 1
+        previous = self.db.execute(text("""
+            SELECT 
+                COUNT(*) AS total,
+                COALESCE(AVG(arr_delay_minutes), 0) AS avg_delay,
+                SUM(CASE WHEN arr_del_15 = 1 THEN 1 ELSE 0 END) AS delayed,
+                SUM(cancelled) AS cancelled
+            FROM flights
+            WHERE origin = :airport
+              AND strftime('%Y', flight_date) = :year
+        """), {"airport": airport, "year": str(prev_year)}).fetchone()
 
-        if not recent or recent.recent_n < 20:
-            raise ValueError("Insufficient recent data")
+        if not current or current.total == 0:
+            raise ValueError("No data for this airport/year")
 
-        # YOUR ENHANCED SCORE (creative!)
-        delay_spike = max(0, (recent.recent_avg - (baseline.base_avg or 15)) / 15) * 30
-        rate_spike = max(0, (recent.recent_rate - (baseline.base_rate or 0.2)) * 2) * 30
-        cancel_spike = min(recent.recent_cancel * 1500, 20)
-        carrier_factor = min((recent.carriers - 1) * 5, 20)
+        total = current.total
+        delay_freq = float(current.delayed or 0) / total
+        cancel_freq = float(current.cancelled or 0) / total
+        avg_delay = float(current.avg_delay or 0)
 
-        disruption_score = min(round(delay_spike + rate_spike + cancel_spike + carrier_factor), 100)
+        # If previous year exists, compare; otherwise, just scale from this year
+        if previous and previous.total and previous.total > 0:
+            prev_delay_freq = float(previous.delayed or 0) / previous.total
+            prev_cancel_freq = float(previous.cancelled or 0) / previous.total
+            delay_change = delay_freq - prev_delay_freq
+            cancel_change = cancel_freq - prev_cancel_freq
+        else:
+            delay_change = 0.0
+            cancel_change = 0.0
 
-        # Levels
-        disruption_level = "Low" if disruption_score < 30 else "Medium" if disruption_score < 70 else "High"
+        # Score 0–100 using this year + change vs last year
+        base_score = (delay_freq * 60) + (cancel_freq * 200) + (avg_delay / 60 * 40)
+        change_penalty = (max(delay_change, 0) * 40) + (max(cancel_change, 0) * 80)
+        disruption_score = min(round(base_score + change_penalty, 1), 100)
 
-        # Baseline comparison
-        delay_vs_avg = f"+{recent.recent_avg - baseline.base_avg:.1f}min" if recent.recent_avg > baseline.base_avg else f"{baseline.base_avg - recent.recent_avg:.1f}min better"
+        if disruption_score < 30:
+            level = "Low"
+        elif disruption_score < 70:
+            level = "Medium"
+        else:
+            level = "High"
+
+        # Simple cause heuristic
+        top_delay_cause = "Cancellations" if cancel_freq > 0.02 else "Delays"
 
         return DisruptionScoreResponse(
             airport=airport,
             disruption_score=disruption_score,
-            delay_frequency=float(recent.recent_rate or 0),
-            cancel_frequency=float(recent.recent_cancel or 0),
-            top_delay_cause="Weather" if recent.recent_cancel > 0.01 else "Volume",
-            disruption_level=disruption_level,
-            period_days=days,
-            vs_baseline=delay_vs_avg
+            delay_frequency=round(delay_freq, 3),
+            cancel_frequency=round(cancel_freq, 3),
+            top_delay_cause=top_delay_cause,
+            disruption_level=level,
+            period_days=365,
+            vs_baseline=f"{delay_change:+.1%} vs {prev_year}"
         )
 
     def get_year_over_year(self, airport: str) -> YearOverYearResponse:
