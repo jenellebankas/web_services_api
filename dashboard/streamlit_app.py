@@ -86,8 +86,8 @@ with st.sidebar:
             "Disruption Score",
             "Route Risk",
             "Best Time to Fly",
-            "✈ Ripple Effect",
-            "🌐 Network Contagion",
+            "Ripple Effect",
+            "Network Contagion",
         ],
         index=0,
         key="nav_view",
@@ -273,11 +273,11 @@ if selected_view == "Best Time to Fly":
         st.warning("Enter a valid 3-letter airport code")
 
 # ════════════════════════════════════════════════════════════════════════════
-# NEW: RIPPLE EFFECT VIEW
+# RIPPLE EFFECT VIEW
 # ════════════════════════════════════════════════════════════════════════════
 
-if selected_view == "✈ Ripple Effect":
-    st.markdown("## ✈ Delay Ripple Effect")
+if selected_view == "Ripple Effect":
+    st.markdown("##Delay Ripple Effect")
     st.caption(
         "Seed a hypothetical delay on any flight to see how it cascades "
         "through every subsequent leg that aircraft flies that day."
@@ -420,11 +420,11 @@ if selected_view == "✈ Ripple Effect":
                 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════════════
-# NEW: NETWORK CONTAGION VIEW
+# NETWORK CONTAGION VIEW
 # ════════════════════════════════════════════════════════════════════════════
 
-if selected_view == "🌐 Network Contagion":
-    st.markdown("## 🌐 Network Contagion")
+if selected_view == "Network Contagion":
+    st.markdown("##Network Contagion")
     st.caption(
         "See how influential each airport is in the US flight network. "
         "A high contagion score means delays there tend to ripple across the country."
