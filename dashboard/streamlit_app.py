@@ -376,8 +376,8 @@ if selected_view == "Ripple Effect":
 # NETWORK CONTAGION VIEW
 # ════════════════════════════════════════════════════════════════════════════
 
-if selected_view == "🌐 Network Contagion":
-    st.markdown("## 🌐 Network Contagion")
+if selected_view == "Network Contagion":
+    st.markdown("## Network Contagion")
     st.caption(
         "See how influential each airport is in the US flight network. "
         "A high contagion score means delays there tend to ripple across the country."
