@@ -95,9 +95,6 @@ with st.sidebar:
 
 st.title("Flight Disruption Analytics")
 
-# ════════════════════════════════════════════════════════════════════════════
-# EXISTING VIEWS (unchanged)
-# ════════════════════════════════════════════════════════════════════════════
 
 if selected_view == "System Overview":
     tab1, tab2, tab3 = st.tabs(["Leaderboard", "Carrier & Airport Performance", "Time Patterns"])
@@ -273,11 +270,11 @@ if selected_view == "Best Time to Fly":
         st.warning("Enter a valid 3-letter airport code")
 
 # ════════════════════════════════════════════════════════════════════════════
-# NEW: RIPPLE EFFECT VIEW
+# RIPPLE EFFECT VIEW
 # ════════════════════════════════════════════════════════════════════════════
 
-if selected_view == "✈ Ripple Effect":
-    st.markdown("## ✈ Delay Ripple Effect")
+if selected_view == "Ripple Effect":
+    st.markdown("## Delay Ripple Effect")
     st.caption(
         "Enter a flight and seed a hypothetical delay to see how it propagates "
         "through every subsequent leg that aircraft flies that day."
@@ -376,7 +373,7 @@ if selected_view == "✈ Ripple Effect":
                 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════════════
-# NEW: NETWORK CONTAGION VIEW
+# NETWORK CONTAGION VIEW
 # ════════════════════════════════════════════════════════════════════════════
 
 if selected_view == "🌐 Network Contagion":

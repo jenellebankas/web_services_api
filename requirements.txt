@@ -33,3 +33,4 @@ streamlit
 requests
 plotly
 matplotlib
+networkx
