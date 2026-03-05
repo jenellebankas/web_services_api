@@ -1,0 +1,103 @@
+# app/api/v1/routers/graph.py
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
+
+from app.api.v1.deps import get_db
+from app.schemas import (
+    ContagionResponse,
+    NetworkNeighborsResponse,
+    RippleResponse,
+)
+from app.services.graph_analytics_service import GraphAnalyticsService
+
+router = APIRouter(prefix="/graph", tags=["graph"])
+
+
+# 1. RIPPLE EFFECT
+@router.get("/ripple-effect", response_model=RippleResponse)
+def ripple_effect(
+    carrier: str = Query(..., min_length=2, max_length=3,
+                         description="Reporting airline code e.g. AA, DL, UA"),
+    flight_num: int = Query(..., description="Flight number e.g. 1234"),
+    flight_date: date = Query(..., description="Date in YYYY-MM-DD format"),
+    initial_delay: float = Query(..., ge=1, le=1440,
+                                 description="Seed delay in minutes (1–1440)"),
+    db: Session = Depends(get_db),
+):
+    """
+    Simulate how an initial departure delay propagates through every subsequent
+    leg flown by the same aircraft on a given date.
+
+    The chain terminates early if the delay is fully absorbed by ground-time
+    buffers between legs.
+    """
+    try:
+        return GraphAnalyticsService(db).get_ripple_effect(
+            carrier, flight_num, flight_date, initial_delay
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# 2. CONTAGION SCORE  (single airport)
+@router.get("/contagion-score/{airport}", response_model=ContagionResponse)
+def contagion_score(
+    airport: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Returns a composite network-centrality score (0–1) for an airport,
+    indicating how likely a disruption there is to spread across the US
+    flight network.
+
+    Components:
+    - **betweenness** (50 %) — how often this airport sits on shortest paths
+    - **degree**      (30 %) — number of direct connections
+    - **closeness**   (20 %) — how quickly disruption can reach other airports
+    """
+    airport = airport.strip().upper()
+    try:
+        return GraphAnalyticsService(db).get_contagion_score(airport)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# 3. CONTAGION LEADERBOARD
+@router.get("/contagion-leaderboard")
+def contagion_leaderboard(
+    limit: int = Query(10, ge=1, le=50,
+                       description="Number of airports to return at each end"),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns the most and least network-influential airports ranked by
+    composite contagion score.
+    """
+    try:
+        return GraphAnalyticsService(db).get_contagion_leaderboard(limit)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# 4. NETWORK NEIGHBOURS
+@router.get("/network-neighbors/{airport}", response_model=NetworkNeighborsResponse)
+def network_neighbors(
+    airport: str,
+    depth: int = Query(
+        default=1, ge=1, le=3,
+        description="How many hops out to explore (max 3 to keep response size sane)"
+    ),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns all airports reachable from `airport` within `depth` connecting
+    flights.  Useful for visualising how far a disruption could spread and
+    for powering a network graph on the dashboard.
+    """
+    airport = airport.strip().upper()
+    try:
+        return GraphAnalyticsService(db).get_network_neighbors(airport, depth)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

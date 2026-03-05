@@ -1,3 +1,4 @@
+# dashboard/components/metrics.py
 DARK_THEME = {
     "primary": "#2d5a2d",
     "secondary": "#4a7c4a",

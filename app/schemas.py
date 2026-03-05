@@ -204,3 +204,56 @@ class RouteRiskResponse(BaseModel):
     safest_route: str
     riskiest_route: str
     routes: List[RouteRiskItem]
+
+
+# -------- Ripple Effect --------
+
+class RippleHop(BaseModel):
+    flight_num: str
+    origin: str
+    dest: str
+    crs_dep_time: datetime
+    estimated_delay_mins: float
+    delay_absorbed_mins: float
+    source: str  # "origin" | "propagated" | "recovered"
+
+
+class RippleResponse(BaseModel):
+    reporting_airline: str
+    flight_num: int
+    flight_date: str
+    initial_delay_mins: float
+    chain: List[RippleHop]
+    total_flights_affected: int
+    final_carried_delay: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# -------- Contagion Score --------
+
+class ContagionResponse(BaseModel):
+    airport_code: str
+    composite_score: float
+    betweenness_score: float
+    degree_score: float
+    closeness_score: float
+    interpretation: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# -------- Network Neighbours --------
+
+class NetworkNeighborItem(BaseModel):
+    airport: str
+    hops: int
+
+
+class NetworkNeighborsResponse(BaseModel):
+    airport: str
+    depth: int
+    total_reachable: int
+    neighbors: List[NetworkNeighborItem]
+
+    model_config = ConfigDict(from_attributes=True)
