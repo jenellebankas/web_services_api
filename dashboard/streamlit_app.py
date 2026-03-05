@@ -277,7 +277,7 @@ if selected_view == "Best Time to Fly":
 # ════════════════════════════════════════════════════════════════════════════
 
 if selected_view == "Ripple Effect":
-    st.markdown("##Delay Ripple Effect")
+    st.markdown("## Delay Ripple Effect")
     st.caption(
         "Seed a hypothetical delay on any flight to see how it cascades "
         "through every subsequent leg that aircraft flies that day."
@@ -301,7 +301,7 @@ if selected_view == "Ripple Effect":
         st.stop()
 
     flight_num = st.selectbox(
-        "② Flight number",
+        "Flight number",
         flight_nums_data,
         format_func=lambda n: f"{carrier}{n}",
         key="ripple_flight_num",
@@ -331,11 +331,11 @@ if selected_view == "Ripple Effect":
             f"({sample['times_operated']} times in dataset)"
         )
 
-    flight_date = st.selectbox("③ Date", dates_data, key="ripple_date")
+    flight_date = st.selectbox("Date", dates_data, key="ripple_date")
 
     # ── step 4: seed delay ───────────────────────────────────────────────
     initial_delay = st.slider(
-        "④ Seed delay (mins)", min_value=15, max_value=300, value=60, step=15
+        "Seed delay (mins)", min_value=15, max_value=300, value=60, step=15
     )
 
     run = st.button("▶  Simulate ripple", type="primary")
@@ -424,7 +424,7 @@ if selected_view == "Ripple Effect":
 # ════════════════════════════════════════════════════════════════════════════
 
 if selected_view == "Network Contagion":
-    st.markdown("##Network Contagion")
+    st.markdown("## Network Contagion")
     st.caption(
         "See how influential each airport is in the US flight network. "
         "A high contagion score means delays there tend to ripple across the country."

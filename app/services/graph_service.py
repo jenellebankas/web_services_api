@@ -1,7 +1,5 @@
 # app/services/graph_service.py
 from __future__ import annotations
-
-from functools import lru_cache
 from typing import Dict, List
 
 import networkx as nx
@@ -83,8 +81,8 @@ def compute_contagion_scores(G: nx.DiGraph) -> Dict[str, Dict[str, float]]:
     and a composite contagion score (0–1).
     """
     betweenness = nx.betweenness_centrality(G, weight="frequency", normalized=True)
-    degree      = nx.degree_centrality(G)
-    closeness   = nx.closeness_centrality(G)
+    degree = nx.degree_centrality(G)
+    closeness = nx.closeness_centrality(G)
 
     def _normalise(d: dict) -> dict:
         mx = max(d.values(), default=1) or 1
@@ -163,9 +161,9 @@ def compute_ripple_chain(
         ).total_seconds() / 60
 
         # Buffer = slack above the minimum viable turnaround
-        buffer   = max(0.0, ground_minutes - MIN_TURNAROUND_MINUTES)
+        buffer = max(0.0, ground_minutes - MIN_TURNAROUND_MINUTES)
         absorbed = min(carried, buffer)
-        carried  = max(0.0, carried - absorbed)
+        carried = max(0.0, carried - absorbed)
 
         chain.append({
             "flight_num":           flight["flight_num"],
