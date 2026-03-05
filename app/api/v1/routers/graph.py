@@ -1,18 +1,121 @@
 # app/api/v1/routers/graph.py
 from datetime import date
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db
 from app.schemas import (
     ContagionResponse,
+    FlightLookupItem,
     NetworkNeighborsResponse,
     RippleResponse,
 )
 from app.services.graph_analytics_service import GraphAnalyticsService
 
 router = APIRouter(prefix="/graph", tags=["graph"])
+
+
+# 0a. LIST CARRIERS
+@router.get("/flights/carriers", response_model=List[str])
+def list_carriers(db: Session = Depends(get_db)):
+    """All carrier codes present in the dataset, sorted."""
+    rows = db.execute(text("""
+        SELECT DISTINCT reporting_airline
+        FROM flights
+        ORDER BY reporting_airline
+    """)).fetchall()
+    return [r[0] for r in rows]
+
+
+# 0b. LIST FLIGHT NUMBERS FOR A CARRIER
+@router.get("/flights/numbers", response_model=List[int])
+def list_flight_numbers(
+    carrier: str = Query(..., min_length=2, max_length=3),
+    db: Session = Depends(get_db),
+):
+    """All flight numbers operated by a carrier, sorted."""
+    rows = db.execute(text("""
+        SELECT DISTINCT flight_num_reporting_airline
+        FROM flights
+        WHERE reporting_airline = :carrier
+        ORDER BY flight_num_reporting_airline
+    """), {"carrier": carrier.upper()}).fetchall()
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"No flights found for carrier {carrier.upper()}")
+    return [r[0] for r in rows]
+
+
+# 0c. LIST DATES A SPECIFIC FLIGHT OPERATED
+@router.get("/flights/dates", response_model=List[str])
+def list_flight_dates(
+    carrier: str = Query(..., min_length=2, max_length=3),
+    flight_num: int = Query(...),
+    db: Session = Depends(get_db),
+):
+    """All dates a specific carrier+flight_num combination operated."""
+    rows = db.execute(text("""
+        SELECT DISTINCT flight_date
+        FROM flights
+        WHERE reporting_airline = :carrier
+          AND flight_num_reporting_airline = :flight_num
+        ORDER BY flight_date
+    """), {"carrier": carrier.upper(), "flight_num": flight_num}).fetchall()
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No dates found for {carrier.upper()} flight {flight_num}"
+        )
+    return [str(r[0]) for r in rows]
+
+
+# 0d. SEARCH FLIGHTS (free-text, for autocomplete)
+@router.get("/flights/search", response_model=List[FlightLookupItem])
+def search_flights(
+    carrier: str = Query(..., min_length=2, max_length=3),
+    flight_num: int = Query(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns all origin→dest legs for a carrier+flight_num across all dates,
+    giving enough context to pick a meaningful date to simulate.
+    """
+    rows = db.execute(text("""
+        SELECT
+            reporting_airline,
+            flight_num_reporting_airline AS flight_num,
+            flight_date,
+            origin,
+            dest,
+            crs_dep_time,
+            COUNT(*) OVER (
+                PARTITION BY reporting_airline, flight_num_reporting_airline, origin, dest
+            ) AS times_operated
+        FROM flights
+        WHERE reporting_airline = :carrier
+          AND flight_num_reporting_airline = :flight_num
+        ORDER BY flight_date DESC
+        LIMIT 100
+    """), {"carrier": carrier.upper(), "flight_num": flight_num}).fetchall()
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No flights found for {carrier.upper()} {flight_num}"
+        )
+    return [
+        FlightLookupItem(
+            reporting_airline=r.reporting_airline,
+            flight_num=r.flight_num,
+            flight_date=str(r.flight_date),
+            origin=r.origin,
+            dest=r.dest,
+            times_operated=r.times_operated,
+        )
+        for r in rows
+    ]
 
 
 # 1. RIPPLE EFFECT

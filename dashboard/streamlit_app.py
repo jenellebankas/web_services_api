@@ -86,8 +86,8 @@ with st.sidebar:
             "Disruption Score",
             "Route Risk",
             "Best Time to Fly",
-            "Ripple Effect",
-            "Network Contagion",
+            "✈ Ripple Effect",
+            "🌐 Network Contagion",
         ],
         index=0,
         key="nav_view",
@@ -95,6 +95,9 @@ with st.sidebar:
 
 st.title("Flight Disruption Analytics")
 
+# ════════════════════════════════════════════════════════════════════════════
+# EXISTING VIEWS (unchanged)
+# ════════════════════════════════════════════════════════════════════════════
 
 if selected_view == "System Overview":
     tab1, tab2, tab3 = st.tabs(["Leaderboard", "Carrier & Airport Performance", "Time Patterns"])
@@ -270,26 +273,70 @@ if selected_view == "Best Time to Fly":
         st.warning("Enter a valid 3-letter airport code")
 
 # ════════════════════════════════════════════════════════════════════════════
-# RIPPLE EFFECT VIEW
+# NEW: RIPPLE EFFECT VIEW
 # ════════════════════════════════════════════════════════════════════════════
 
-if selected_view == "Ripple Effect":
-    st.markdown("## Delay Ripple Effect")
+if selected_view == "✈ Ripple Effect":
+    st.markdown("## ✈ Delay Ripple Effect")
     st.caption(
-        "Enter a flight and seed a hypothetical delay to see how it propagates "
+        "Seed a hypothetical delay on any flight to see how it cascades "
         "through every subsequent leg that aircraft flies that day."
     )
-
     st.markdown("---")
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        carrier = st.text_input("Carrier code", "AA", max_chars=3).upper().strip()
-    with col2:
-        flight_num = st.number_input("Flight number", min_value=1, max_value=9999, value=100, step=1)
-    with col3:
-        flight_date = st.date_input("Date", value=pd.Timestamp("2024-06-15"))
-    with col4:
-        initial_delay = st.slider("Seed delay (mins)", min_value=15, max_value=300, value=60, step=15)
+
+    # ── step 1: pick carrier ─────────────────────────────────────────────
+    carriers_data = safe_graph_call("flights/carriers", spinner_text="Loading carriers...")
+    if not carriers_data:
+        st.warning("Could not load carrier list — check API connection.")
+        st.stop()
+
+    carrier = st.selectbox("① Carrier", carriers_data, key="ripple_carrier")
+
+    # ── step 2: pick flight number for that carrier ──────────────────────
+    flight_nums_data = safe_graph_call(
+        "flights/numbers", {"carrier": carrier}, spinner_text="Loading flight numbers..."
+    )
+    if not flight_nums_data:
+        st.warning(f"No flights found for {carrier}.")
+        st.stop()
+
+    flight_num = st.selectbox(
+        "② Flight number",
+        flight_nums_data,
+        format_func=lambda n: f"{carrier}{n}",
+        key="ripple_flight_num",
+    )
+
+    # ── step 3: pick date that flight actually operated ──────────────────
+    dates_data = safe_graph_call(
+        "flights/dates",
+        {"carrier": carrier, "flight_num": flight_num},
+        spinner_text="Loading dates...",
+    )
+    if not dates_data:
+        st.warning(f"No dates found for {carrier}{flight_num}.")
+        st.stop()
+
+    # show route context while picking date
+    search_data = safe_graph_call(
+        "flights/search",
+        {"carrier": carrier, "flight_num": flight_num},
+        spinner_text="Loading route info...",
+    )
+    if search_data:
+        sample = search_data[0]
+        st.info(
+            f"**{carrier}{flight_num}** typically operates "
+            f"**{sample['origin']} → {sample['dest']}** "
+            f"({sample['times_operated']} times in dataset)"
+        )
+
+    flight_date = st.selectbox("③ Date", dates_data, key="ripple_date")
+
+    # ── step 4: seed delay ───────────────────────────────────────────────
+    initial_delay = st.slider(
+        "④ Seed delay (mins)", min_value=15, max_value=300, value=60, step=15
+    )
 
     run = st.button("▶  Simulate ripple", type="primary")
 
@@ -373,11 +420,11 @@ if selected_view == "Ripple Effect":
                 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════════════════════
-# NETWORK CONTAGION VIEW
+# NEW: NETWORK CONTAGION VIEW
 # ════════════════════════════════════════════════════════════════════════════
 
-if selected_view == "Network Contagion":
-    st.markdown("## Network Contagion")
+if selected_view == "🌐 Network Contagion":
+    st.markdown("## 🌐 Network Contagion")
     st.caption(
         "See how influential each airport is in the US flight network. "
         "A high contagion score means delays there tend to ripple across the country."

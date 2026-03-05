@@ -206,6 +206,19 @@ class RouteRiskResponse(BaseModel):
     routes: List[RouteRiskItem]
 
 
+# -------- Flight Lookup (for ripple effect inputs) --------
+
+class FlightLookupItem(BaseModel):
+    reporting_airline: str
+    flight_num: int
+    flight_date: str
+    origin: str
+    dest: str
+    times_operated: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # -------- Ripple Effect --------
 
 class RippleHop(BaseModel):

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -122,7 +122,6 @@ class GraphAnalyticsService:
                 WHERE reporting_airline = :carrier
                   AND flight_num_reporting_airline = :flight_num
                   AND flight_date = :fdate
-                ORDER BY crs_dep_time ASC
             """),
             {
                 "carrier":    reporting_airline.upper(),
