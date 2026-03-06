@@ -1,10 +1,8 @@
 # tests/test_services/test_services_graph.py
 import pytest
 
-from app.services.analytics_service import AnalyticsService
 from app.services.graph_analytics_service import GraphAnalyticsService
 from app.services.graph_service import (
-    build_flight_graph,
     compute_contagion_scores,
     compute_ripple_chain,
 )
@@ -24,8 +22,8 @@ class TestRippleChainLogic:
         for i, ((dep, arr), (orig, dest)) in enumerate(zip(zip(dep_times, arr_times), origin_dest)):
             legs.append({
                 "flight_num": str(100 + i),
-                "origin":     orig,
-                "dest":       dest,
+                "origin": orig,
+                "dest": dest,
                 "crs_dep_time": datetime.fromisoformat(dep),
                 "crs_arr_time": datetime.fromisoformat(arr),
             })
@@ -68,11 +66,11 @@ class TestRippleChainLogic:
         from datetime import datetime
         schedule = [
             {"flight_num": "1", "origin": "LAX", "dest": "JFK",
-             "crs_dep_time": datetime(2024,1,15,6,0), "crs_arr_time": datetime(2024,1,15,14,0)},
+             "crs_dep_time": datetime(2024, 1, 15, 6, 0), "crs_arr_time": datetime(2024, 1, 15, 14, 0)},
             {"flight_num": "2", "origin": "JFK", "dest": "ORD",
-             "crs_dep_time": datetime(2024,1,15,18,0), "crs_arr_time": datetime(2024,1,15,20,0)},
+             "crs_dep_time": datetime(2024, 1, 15, 18, 0), "crs_arr_time": datetime(2024, 1, 15, 20, 0)},
             {"flight_num": "3", "origin": "ORD", "dest": "DEN",
-             "crs_dep_time": datetime(2024,1,15,22,0), "crs_arr_time": datetime(2024,1,16,0,0)},
+             "crs_dep_time": datetime(2024, 1, 15, 22, 0), "crs_arr_time": datetime(2024, 1, 16, 0, 0)},
         ]
         chain = compute_ripple_chain(schedule, initial_delay=30)
         # Delay absorbed between leg 1→2 (4hr buffer), chain ends
@@ -122,9 +120,9 @@ class TestContagionScoreLogic:
         scores = compute_contagion_scores(G)
         for airport in G.nodes():
             assert "betweenness_score" in scores[airport]
-            assert "degree_score"      in scores[airport]
-            assert "closeness_score"   in scores[airport]
-            assert "composite_score"   in scores[airport]
+            assert "degree_score" in scores[airport]
+            assert "closeness_score" in scores[airport]
+            assert "composite_score" in scores[airport]
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -171,7 +169,7 @@ class TestGraphAnalyticsService:
         assert result.depth == 1
         assert result.total_reachable >= 1
         codes = [n.airport for n in result.neighbors]
-        assert "JFK" in codes   # LAX→JFK in seed data
+        assert "JFK" in codes  # LAX→JFK in seed data
 
     def test_network_neighbors_depth_2_reaches_further(self, db_session):
         svc = GraphAnalyticsService(db_session)
@@ -221,7 +219,7 @@ class TestGraphAnalyticsService:
         result = svc.get_delay_cause_breakdown("LAX", year=2024)
         assert result.airport == "LAX"
         assert result.year == 2024
-        assert len(result.causes) == 5          # always all 5 causes returned
+        assert len(result.causes) == 5  # always all 5 causes returned
         cause_names = {c.cause for c in result.causes}
         assert cause_names == {"Carrier", "Weather", "NAS", "Security", "Late Aircraft"}
 
@@ -229,7 +227,7 @@ class TestGraphAnalyticsService:
         svc = GraphAnalyticsService(db_session)
         result = svc.get_delay_cause_breakdown("LAX", year=2024)
         total_pct = sum(c.pct_of_total for c in result.causes)
-        assert abs(total_pct - 100.0) < 1.0     # allow rounding error
+        assert abs(total_pct - 100.0) < 1.0  # allow rounding error
 
     def test_delay_cause_breakdown_sorted_descending(self, db_session):
         svc = GraphAnalyticsService(db_session)
@@ -248,7 +246,7 @@ class TestGraphAnalyticsService:
         svc = GraphAnalyticsService(db_session)
         result = svc.get_cancellation_reasons("LAX", year=2024)
         assert result.airport == "LAX"
-        assert result.total_cancellations == 2   # A + B in seed data
+        assert result.total_cancellations == 2  # A + B in seed data
         assert len(result.reasons) == 2
 
     def test_cancellation_reasons_labels_decoded(self, db_session):
