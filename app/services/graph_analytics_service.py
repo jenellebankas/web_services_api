@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -141,13 +141,26 @@ class GraphAnalyticsService:
                 f"flight {flight_num} on {flight_date}"
             )
 
+        from datetime import datetime
+
+        def _parse_dt(val):
+            """SQLite returns datetimes as strings — normalise to datetime."""
+            if isinstance(val, datetime):
+                return val
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
+                try:
+                    return datetime.strptime(val, fmt)
+                except (ValueError, TypeError):
+                    continue
+            raise ValueError(f"Cannot parse datetime: {val!r}")
+
         schedule = [
             {
-                "flight_num": str(r.flight_num),
-                "origin":     r.origin,
-                "dest":       r.dest,
-                "crs_dep_time": r.crs_dep_time,
-                "crs_arr_time": r.crs_arr_time,
+                "flight_num":   str(r.flight_num),
+                "origin":       r.origin,
+                "dest":         r.dest,
+                "crs_dep_time": _parse_dt(r.crs_dep_time),
+                "crs_arr_time": _parse_dt(r.crs_arr_time),
             }
             for r in rows
         ]
