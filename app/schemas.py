@@ -147,20 +147,6 @@ class WeeklyPatternResponse(BaseModel):
     days: List[WeeklyPatternItem]
 
 
-class DelayCauseItem(BaseModel):
-    cause: str
-    delay_minutes: int
-    pct_of_total: float
-
-
-class DelayCauseBreakdownResponse(BaseModel):
-    airport: str
-    year: int
-    total_delayed_flights: int
-    total_delay_minutes: int
-    causes: List[DelayCauseItem]
-
-
 class LeaderboardItem(BaseModel):
     airport: str
     otp_pct: float
@@ -206,6 +192,51 @@ class RouteRiskResponse(BaseModel):
     routes: List[RouteRiskItem]
 
 
+# ============================================================
+# APPEND these classes to the bottom of app/schemas.py
+# ============================================================
+
+# -------- Delay Cause Breakdown --------
+
+class DelayCauseItem(BaseModel):
+    cause: str
+    total_minutes: int
+    pct_of_total: float
+    flights_affected: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DelayCauseBreakdownResponse(BaseModel):
+    airport: str
+    year: int
+    total_delayed_flights: int
+    total_delay_minutes: int
+    causes: List[DelayCauseItem]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# -------- Cancellation Reasons --------
+
+class CancellationReasonItem(BaseModel):
+    code: str          # A / B / C / D
+    label: str         # human-readable
+    count: int
+    pct_of_cancelled: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CancellationReasonsResponse(BaseModel):
+    airport: str
+    year: int
+    total_cancellations: int
+    reasons: List[CancellationReasonItem]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # -------- Flight Lookup (for ripple effect inputs) --------
 
 class FlightLookupItem(BaseModel):
@@ -217,7 +248,6 @@ class FlightLookupItem(BaseModel):
     times_operated: int
 
     model_config = ConfigDict(from_attributes=True)
-
 
 # -------- Ripple Effect --------
 

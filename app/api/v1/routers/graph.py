@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db
 from app.schemas import (
+    CancellationReasonsResponse,
     ContagionResponse,
+    DelayCauseBreakdownResponse,
     FlightLookupItem,
     NetworkNeighborsResponse,
     RippleResponse,
@@ -202,5 +204,43 @@ def network_neighbors(
     airport = airport.strip().upper()
     try:
         return GraphAnalyticsService(db).get_network_neighbors(airport, depth)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# 5. DELAY CAUSE BREAKDOWN
+@router.get("/delay-causes/{airport}", response_model=DelayCauseBreakdownResponse)
+def delay_cause_breakdown(
+    airport: str,
+    year: int = Query(2024, ge=2023, le=2024),
+    db: Session = Depends(get_db),
+):
+    """
+    Breaks down total delay minutes at an airport by cause:
+    Carrier, Weather, NAS, Security, Late Aircraft.
+    Only counts flights where arr_del_15 = 1 (delayed >15 min).
+    Results are sorted by most impactful cause first.
+    """
+    airport = airport.strip().upper()
+    try:
+        return GraphAnalyticsService(db).get_delay_cause_breakdown(airport, year)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# 6. CANCELLATION REASONS
+@router.get("/cancellation-reasons/{airport}", response_model=CancellationReasonsResponse)
+def cancellation_reasons(
+    airport: str,
+    year: int = Query(2024, ge=2023, le=2024),
+    db: Session = Depends(get_db),
+):
+    """
+    Decodes BTS cancellation codes into human-readable reasons:
+    A = Carrier, B = Weather, C = National Air System, D = Security.
+    """
+    airport = airport.strip().upper()
+    try:
+        return GraphAnalyticsService(db).get_cancellation_reasons(airport, year)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

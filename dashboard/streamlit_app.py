@@ -154,6 +154,7 @@ if selected_view == "System Overview":
             fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig, use_container_width=True)
 
+
 if selected_view == "Single Airport Overview":
     airport = st.text_input("Airport", "JFK", key="overview_airport").upper().strip()
     analysis_year = st.selectbox("Year", [2023, 2024], index=1, key="overview_year")
@@ -162,39 +163,132 @@ if selected_view == "Single Airport Overview":
         airport_data = safe_api_call(f"airport-delays/{airport}")
         if airport_data:
             col1, col2, col3, col4 = st.columns(4)
-            metrics.metric_card("Total Flights", f"{airport_data.get('total_flights', 0):,}", col1)
-            metrics.metric_card("Avg Delay", f"{airport_data.get('avg_arrival_delay', 0):.1f}min", col2)
-            metrics.metric_card("Delay Rate", f"{airport_data.get('delay_rate', 0) * 100:.1f}%", col3)
-            metrics.metric_card("Cancel Rate", f"{airport_data.get('cancel_rate', 0) * 100:.1f}%", col4)
+            metrics.metric_card("Total Flights",  f"{airport_data.get('total_flights', 0):,}", col1)
+            metrics.metric_card("Avg Delay",      f"{airport_data.get('avg_arrival_delay', 0):.1f}min", col2)
+            metrics.metric_card("Delay Rate",     f"{airport_data.get('delay_rate', 0) * 100:.1f}%", col3)
+            metrics.metric_card("Cancel Rate",    f"{airport_data.get('cancel_rate', 0) * 100:.1f}%", col4)
 
-        st.markdown("### Daily Delay Patterns")
-        daily_data = safe_api_call("daily-pattern", {"airport": airport, "year": analysis_year})
-        if daily_data and daily_data.get("hours"):
-            df_daily = pd.DataFrame(daily_data["hours"])
-            fig_daily = px.line(df_daily, x="hour", y="delay_rate",
-                                title=f"{airport} Hourly Delay Rate ({analysis_year})",
-                                markers=True, color_discrete_sequence=["#4caf50"])
-            fig_daily.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_daily, use_container_width=True)
+        tab_daily, tab_weekly, tab_causes = st.tabs(
+            ["Daily Pattern", "Weekly Pattern", "Delay Causes"]
+        )
 
-        st.markdown("### Weekly Delay Patterns")
-        weekly_data = safe_api_call("weekly-pattern", {"airport": airport, "year": analysis_year})
-        if weekly_data and weekly_data.get("days"):
-            df_weekly = pd.DataFrame(weekly_data["days"])
-            df_weekly['delay_rate_pct'] = df_weekly['delay_rate'] * 100
-            fig_weekly = px.bar(df_weekly, x="dow", y="delay_rate_pct",
-                                title=f"{airport} Weekly Delay Rates ({analysis_year})",
-                                color_discrete_sequence=["#66bb6a"], text="delay_rate_pct")
-            fig_weekly.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-            fig_weekly.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_weekly, use_container_width=True)
-            worst_day = df_weekly.loc[df_weekly['delay_rate_pct'].idxmax()]
-            best_day = df_weekly.loc[df_weekly['delay_rate_pct'].idxmin()]
-            col1, col2 = st.columns(2)
-            col1.metric("Worst Day", worst_day['dow'], f"{worst_day['delay_rate_pct']:.1f}%")
-            col2.metric("Best Day", best_day['dow'], f"{best_day['delay_rate_pct']:.1f}%")
+        with tab_daily:
+            st.markdown("### Daily Delay Patterns")
+            daily_data = safe_api_call("daily-pattern", {"airport": airport, "year": analysis_year})
+            if daily_data and daily_data.get("hours"):
+                df_daily = pd.DataFrame(daily_data["hours"])
+                fig_daily = px.line(df_daily, x="hour", y="delay_rate",
+                                    title=f"{airport} Hourly Delay Rate ({analysis_year})",
+                                    markers=True, color_discrete_sequence=["#4caf50"])
+                fig_daily.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_daily, use_container_width=True)
+
+        with tab_weekly:
+            st.markdown("### Weekly Delay Patterns")
+            weekly_data = safe_api_call("weekly-pattern", {"airport": airport, "year": analysis_year})
+            if weekly_data and weekly_data.get("days"):
+                df_weekly = pd.DataFrame(weekly_data["days"])
+                df_weekly['delay_rate_pct'] = df_weekly['delay_rate'] * 100
+                fig_weekly = px.bar(df_weekly, x="dow", y="delay_rate_pct",
+                                    title=f"{airport} Weekly Delay Rates ({analysis_year})",
+                                    color_discrete_sequence=["#66bb6a"], text="delay_rate_pct")
+                fig_weekly.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+                fig_weekly.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_weekly, use_container_width=True)
+                worst_day = df_weekly.loc[df_weekly['delay_rate_pct'].idxmax()]
+                best_day  = df_weekly.loc[df_weekly['delay_rate_pct'].idxmin()]
+                col1, col2 = st.columns(2)
+                col1.metric("Worst Day", worst_day['dow'], f"{worst_day['delay_rate_pct']:.1f}%")
+                col2.metric("Best Day",  best_day['dow'],  f"{best_day['delay_rate_pct']:.1f}%")
+
+        with tab_causes:
+            st.markdown("### Why flights are delayed")
+            col_l, col_r = st.columns(2)
+
+            # ── delay causes ────────────────────────────────────────────
+            causes_data = safe_graph_call(
+                f"delay-causes/{airport}", {"year": analysis_year},
+                spinner_text=f"Loading delay causes for {airport}..."
+            )
+            with col_l:
+                if causes_data and causes_data.get("causes"):
+                    df_causes = pd.DataFrame(causes_data["causes"])
+
+                    fig_donut = px.pie(
+                        df_causes,
+                        names="cause",
+                        values="total_minutes",
+                        hole=0.55,
+                        color_discrete_sequence=[
+                            "#68a368", "#4caf50", "#a5d6a7", "#ff7043", "#ffd54f"
+                        ],
+                        title=f"{airport} — delay minutes by cause ({analysis_year})",
+                    )
+                    fig_donut.update_traces(
+                        textposition="outside",
+                        textinfo="percent+label",
+                    )
+                    fig_donut.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        font_color=DARK_THEME["text"],
+                        showlegend=False,
+                        height=360,
+                        margin=dict(t=50, b=0, l=0, r=0),
+                    )
+                    st.plotly_chart(fig_donut, use_container_width=True)
+
+                    # summary callout — biggest cause
+                    top = df_causes.iloc[0]
+                    st.info(
+                        f"**{top['cause']}** issues account for "
+                        f"**{top['pct_of_total']:.1f}%** of all delay minutes "
+                        f"at {airport}, affecting **{top['flights_affected']:,}** flights."
+                    )
+
+            # ── cancellation reasons ─────────────────────────────────────
+            with col_r:
+                cancel_data = safe_graph_call(
+                    f"cancellation-reasons/{airport}", {"year": analysis_year},
+                    spinner_text=f"Loading cancellation reasons for {airport}..."
+                )
+                if cancel_data and cancel_data.get("reasons"):
+                    df_cancel = pd.DataFrame(cancel_data["reasons"])
+
+                    fig_cancel = px.bar(
+                        df_cancel,
+                        x="pct_of_cancelled",
+                        y="label",
+                        orientation="h",
+                        text="pct_of_cancelled",
+                        color="pct_of_cancelled",
+                        color_continuous_scale=["#2d5a2d", "#ff7043"],
+                        title=f"{airport} — cancellation reasons ({analysis_year})",
+                        labels={
+                            "pct_of_cancelled": "% of cancellations",
+                            "label": "Reason",
+                        },
+                    )
+                    fig_cancel.update_traces(
+                        texttemplate="%{text:.1f}%", textposition="outside"
+                    )
+                    fig_cancel.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        font_color=DARK_THEME["text"],
+                        coloraxis_showscale=False,
+                        height=360,
+                        yaxis={"autorange": "reversed"},
+                        margin=dict(l=0),
+                    )
+                    st.plotly_chart(fig_cancel, use_container_width=True)
+
+                    st.metric(
+                        "Total cancellations",
+                        f"{cancel_data.get('total_cancellations', 0):,}"
+                    )
     else:
         st.warning("Enter a valid 3-letter airport code (JFK, LAX, ORD, etc.)")
+
 
 if selected_view == "Disruption Score":
     st.markdown("### Airport Disruption Score Dashboard")
@@ -213,7 +307,7 @@ if selected_view == "Disruption Score":
             level = data.get('disruption_level', 'Unknown')
             color = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}.get(level, "⚪")
             col1.metric(f"{color} {airport} Disruption Score", f"{score:.0f}/100", data.get('vs_baseline', 'N/A'))
-            col2.metric("Delay Frequency", f"{data.get('delay_frequency', 0) * 100:.1f}%")
+            col2.metric("Delay Frequency",  f"{data.get('delay_frequency', 0) * 100:.1f}%")
             col3.metric("Cancel Frequency", f"{data.get('cancel_frequency', 0) * 100:.1f}%")
             st.markdown("---")
             col1, col2 = st.columns(2)
@@ -233,10 +327,11 @@ if selected_view == "Disruption Score":
     if scores:
         st.bar_chart(pd.DataFrame(scores).set_index("airport")["score"], use_container_width=True)
 
+
 if selected_view == "Route Risk":
     st.markdown("### Route Risk Analysis")
-    year_route = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
-    origin = st.text_input("Origin Airport", "JFK", key="route_origin").upper().strip()
+    year_route  = st.selectbox("Year", [2023, 2024], index=1, key="route_risk_year")
+    origin      = st.text_input("Origin Airport", "JFK", key="route_origin").upper().strip()
     destinations = st.text_input("Destinations (comma-separated)", "LAX,ORD,ATL", key="route_destinations").strip()
 
     if len(origin) == 3 and origin.isalpha() and destinations:
@@ -248,22 +343,23 @@ if selected_view == "Route Risk":
     else:
         st.warning("Enter valid origin (3 letters) and destinations")
 
+
 if selected_view == "Best Time to Fly":
     st.markdown("### Best Time Analysis")
     year_best = st.selectbox("Year", [2023, 2024], index=1, key="best_time_year")
-    airport = st.text_input("Airport", "JFK", key="best_time_airport").upper().strip()
+    airport   = st.text_input("Airport", "JFK", key="best_time_airport").upper().strip()
 
     if len(airport) == 3 and airport.isalpha():
         best_data = safe_api_call(f"best-time/{airport}", {"year": year_best})
         if best_data:
             st.success(best_data.get("insight", "Analysis complete"))
             if best_data.get("best_hours") and best_data.get("worst_hours"):
-                best_df = pd.DataFrame(best_data["best_hours"])
+                best_df  = pd.DataFrame(best_data["best_hours"])
                 worst_df = pd.DataFrame(best_data["worst_hours"])
                 col1, col2 = st.columns(2)
                 with col1:
                     bh = best_df.iloc[0]
-                    st.metric("Best Hour", f"{int(bh['hour'])}:00")
+                    st.metric("Best Hour",  f"{int(bh['hour'])}:00")
                     st.metric("Delay Risk", f"{bh['delay_rate'] * 100:.1f}%")
                 with col2:
                     wh = worst_df.iloc[0]
@@ -272,8 +368,9 @@ if selected_view == "Best Time to Fly":
     else:
         st.warning("Enter a valid 3-letter airport code")
 
+
 # ════════════════════════════════════════════════════════════════════════════
-# RIPPLE EFFECT VIEW
+# NEW: RIPPLE EFFECT VIEW
 # ════════════════════════════════════════════════════════════════════════════
 
 if selected_view == "Ripple Effect":
@@ -301,7 +398,7 @@ if selected_view == "Ripple Effect":
         st.stop()
 
     flight_num = st.selectbox(
-        "Flight number",
+        "② Flight number",
         flight_nums_data,
         format_func=lambda n: f"{carrier}{n}",
         key="ripple_flight_num",
@@ -331,11 +428,11 @@ if selected_view == "Ripple Effect":
             f"({sample['times_operated']} times in dataset)"
         )
 
-    flight_date = st.selectbox("Date", dates_data, key="ripple_date")
+    flight_date = st.selectbox("③ Date", dates_data, key="ripple_date")
 
     # ── step 4: seed delay ───────────────────────────────────────────────
     initial_delay = st.slider(
-        "Seed delay (mins)", min_value=15, max_value=300, value=60, step=15
+        "④ Seed delay (mins)", min_value=15, max_value=300, value=60, step=15
     )
 
     run = st.button("▶  Simulate ripple", type="primary")
@@ -344,9 +441,9 @@ if selected_view == "Ripple Effect":
         data = safe_graph_call(
             f"ripple-effect",
             {
-                "carrier": carrier,
-                "flight_num": int(flight_num),
-                "flight_date": str(flight_date),
+                "carrier":       carrier,
+                "flight_num":    int(flight_num),
+                "flight_date":   str(flight_date),
                 "initial_delay": initial_delay,
             },
             spinner_text="Simulating delay chain...",
@@ -358,9 +455,9 @@ if selected_view == "Ripple Effect":
             # ── summary metrics ──────────────────────────────────────────
             st.markdown("---")
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Legs in chain", len(chain))
-            c2.metric("Flights affected", data.get("total_flights_affected", 0))
-            c3.metric("Seed delay", f"{data.get('initial_delay_mins', 0):.0f} min")
+            c1.metric("Legs in chain",       len(chain))
+            c2.metric("Flights affected",    data.get("total_flights_affected", 0))
+            c3.metric("Seed delay",          f"{data.get('initial_delay_mins', 0):.0f} min")
             c4.metric("Final carried delay", f"{data.get('final_carried_delay', 0):.0f} min")
 
             # ── delay decay chart ────────────────────────────────────────
@@ -419,8 +516,9 @@ if selected_view == "Ripple Effect":
                 </div>
                 """, unsafe_allow_html=True)
 
+
 # ════════════════════════════════════════════════════════════════════════════
-# NETWORK CONTAGION VIEW
+# NEW: NETWORK CONTAGION VIEW
 # ════════════════════════════════════════════════════════════════════════════
 
 if selected_view == "Network Contagion":
@@ -439,17 +537,17 @@ if selected_view == "Network Contagion":
 
         with col1:
             airport_c = st.text_input("Airport code", "ORD", max_chars=3, key="contagion_airport").upper().strip()
-            depth = st.radio("Network depth", [1, 2, 3], horizontal=True, key="contagion_depth")
-            go_btn = st.button("Analyse", type="primary", key="contagion_go")
+            depth     = st.radio("Network depth", [1, 2, 3], horizontal=True, key="contagion_depth")
+            go_btn    = st.button("Analyse", type="primary", key="contagion_go")
 
         if go_btn and len(airport_c) == 3:
-            score_data = safe_graph_call(f"contagion-score/{airport_c}")
+            score_data     = safe_graph_call(f"contagion-score/{airport_c}")
             neighbors_data = safe_graph_call(f"network-neighbors/{airport_c}", {"depth": depth})
 
             with col2:
                 if score_data:
                     composite = score_data.get("composite_score", 0)
-                    pct = int(composite * 100)
+                    pct       = int(composite * 100)
 
                     # radial gauge
                     fig_gauge = go.Figure(go.Indicator(
@@ -458,13 +556,13 @@ if selected_view == "Network Contagion":
                         number={"suffix": "%", "font": {"color": DARK_THEME["accent"]}},
                         gauge={
                             "axis": {"range": [0, 100], "tickcolor": DARK_THEME["text"]},
-                            "bar": {"color": DARK_THEME["accent"]},
+                            "bar":  {"color": DARK_THEME["accent"]},
                             "bgcolor": DARK_THEME["card"],
                             "steps": [
-                                {"range": [0, 25], "color": "#2a332a"},
+                                {"range": [0,  25], "color": "#2a332a"},
                                 {"range": [25, 50], "color": "#2d3d2d"},
                                 {"range": [50, 75], "color": "#3a4e2a"},
-                                {"range": [75, 100], "color": "#4a6a2a"},
+                                {"range": [75, 100],"color": "#4a6a2a"},
                             ],
                             "threshold": {"line": {"color": "#ff7043", "width": 3}, "value": 75},
                         },
@@ -487,9 +585,9 @@ if selected_view == "Network Contagion":
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Betweenness", f"{score_data.get('betweenness_score', 0):.3f}",
                           help="How often this airport lies on shortest paths between others")
-                c2.metric("Degree", f"{score_data.get('degree_score', 0):.3f}",
+                c2.metric("Degree",      f"{score_data.get('degree_score', 0):.3f}",
                           help="Number of direct connections, normalised")
-                c3.metric("Closeness", f"{score_data.get('closeness_score', 0):.3f}",
+                c3.metric("Closeness",   f"{score_data.get('closeness_score', 0):.3f}",
                           help="How quickly a delay could reach all other airports")
 
             # network neighbour map
@@ -528,16 +626,16 @@ if selected_view == "Network Contagion":
         if lb_data:
             st.caption(f"Scored across {lb_data.get('total_airports', '?')} airports in the network")
 
-            most = lb_data.get("most_influential", [])
-            least = lb_data.get("least_influential", [])
+            most    = lb_data.get("most_influential", [])
+            least   = lb_data.get("least_influential", [])
 
             col1, col2 = st.columns(2)
 
             with col1:
-                st.markdown("#### 🔴 Most influential (highest contagion)")
+                st.markdown("#### Most influential (highest contagion)")
                 if most:
                     df_most = pd.DataFrame(most)[["airport_code", "composite_score",
-                                                  "betweenness_score", "degree_score"]]
+                                                   "betweenness_score", "degree_score"]]
                     df_most["composite_score"] = df_most["composite_score"].apply(lambda x: f"{x:.3f}")
                     st.dataframe(df_most, use_container_width=True, hide_index=True)
 
@@ -562,10 +660,10 @@ if selected_view == "Network Contagion":
                     st.plotly_chart(fig_most, use_container_width=True)
 
             with col2:
-                st.markdown("#### 🟢 Least influential (lowest contagion)")
+                st.markdown("#### Least influential (lowest contagion)")
                 if least:
                     df_least = pd.DataFrame(least)[["airport_code", "composite_score",
-                                                    "betweenness_score", "degree_score"]]
+                                                     "betweenness_score", "degree_score"]]
                     df_least["composite_score"] = df_least["composite_score"].apply(lambda x: f"{x:.3f}")
                     st.dataframe(df_least, use_container_width=True, hide_index=True)
 

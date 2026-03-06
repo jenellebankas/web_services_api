@@ -2,13 +2,17 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.schemas import (
+    CancellationReasonItem,
+    CancellationReasonsResponse,
     ContagionResponse,
+    DelayCauseBreakdownResponse,
+    DelayCauseItem,
     NetworkNeighborItem,
     NetworkNeighborsResponse,
     RippleHop,
@@ -122,6 +126,7 @@ class GraphAnalyticsService:
                 WHERE reporting_airline = :carrier
                   AND flight_num_reporting_airline = :flight_num
                   AND flight_date = :fdate
+                ORDER BY crs_dep_time ASC
             """),
             {
                 "carrier":    reporting_airline.upper(),
@@ -165,7 +170,124 @@ class GraphAnalyticsService:
 
 
 # ---------------------------------------------------------------------------
-# Thin wrapper to avoid importing networkx at the top of the service
+# Delay cause breakdown
+# ---------------------------------------------------------------------------
+
+    def get_delay_cause_breakdown(
+        self, airport: str, year: int = 2024
+    ) -> DelayCauseBreakdownResponse:
+        CAUSE_COLS = {
+            "Carrier":      "carrier_delay",
+            "Weather":      "weather_delay",
+            "NAS":          "nas_delay",
+            "Security":     "security_delay",
+            "Late Aircraft":"late_aircraft_delay",
+        }
+
+        # One query: sum each cause column + count flights where each is > 0
+        row = self.db.execute(text("""
+            SELECT
+                COUNT(*)                                        AS total_delayed,
+                SUM(COALESCE(carrier_delay,      0))            AS carrier_mins,
+                SUM(COALESCE(weather_delay,      0))            AS weather_mins,
+                SUM(COALESCE(nas_delay,          0))            AS nas_mins,
+                SUM(COALESCE(security_delay,     0))            AS security_mins,
+                SUM(COALESCE(late_aircraft_delay,0))            AS late_aircraft_mins,
+                SUM(CASE WHEN carrier_delay       > 0 THEN 1 ELSE 0 END) AS carrier_flights,
+                SUM(CASE WHEN weather_delay       > 0 THEN 1 ELSE 0 END) AS weather_flights,
+                SUM(CASE WHEN nas_delay           > 0 THEN 1 ELSE 0 END) AS nas_flights,
+                SUM(CASE WHEN security_delay      > 0 THEN 1 ELSE 0 END) AS security_flights,
+                SUM(CASE WHEN late_aircraft_delay > 0 THEN 1 ELSE 0 END) AS late_aircraft_flights
+            FROM flights
+            WHERE origin = :airport
+              AND arr_del_15 = 1
+              AND strftime('%Y', flight_date) = :year
+        """), {"airport": airport, "year": str(year)}).fetchone()
+
+        if not row or not row.total_delayed:
+            raise ValueError(f"No delay data for {airport} in {year}")
+
+        raw = {
+            "Carrier":       (int(row.carrier_mins or 0),      int(row.carrier_flights or 0)),
+            "Weather":       (int(row.weather_mins or 0),      int(row.weather_flights or 0)),
+            "NAS":           (int(row.nas_mins or 0),          int(row.nas_flights or 0)),
+            "Security":      (int(row.security_mins or 0),     int(row.security_flights or 0)),
+            "Late Aircraft": (int(row.late_aircraft_mins or 0),int(row.late_aircraft_flights or 0)),
+        }
+
+        total_mins = sum(v[0] for v in raw.values()) or 1  # avoid div/0
+
+        causes = sorted(
+            [
+                DelayCauseItem(
+                    cause=name,
+                    total_minutes=mins,
+                    pct_of_total=round(mins / total_mins * 100, 1),
+                    flights_affected=flights,
+                )
+                for name, (mins, flights) in raw.items()
+            ],
+            key=lambda x: x.total_minutes,
+            reverse=True,
+        )
+
+        return DelayCauseBreakdownResponse(
+            airport=airport,
+            year=year,
+            total_delayed_flights=int(row.total_delayed),
+            total_delay_minutes=total_mins,
+            causes=causes,
+        )
+
+    # ------------------------------------------------------------------
+    # Cancellation reasons
+    # ------------------------------------------------------------------
+
+    CANCEL_LABELS = {
+        "A": "Carrier",
+        "B": "Weather",
+        "C": "National Air System",
+        "D": "Security",
+    }
+
+    def get_cancellation_reasons(
+        self, airport: str, year: int = 2024
+    ) -> CancellationReasonsResponse:
+        rows = self.db.execute(text("""
+            SELECT
+                UPPER(COALESCE(cancellation_code, '?')) AS code,
+                COUNT(*) AS cnt
+            FROM flights
+            WHERE origin  = :airport
+              AND cancelled = 1
+              AND strftime('%Y', flight_date) = :year
+            GROUP BY code
+            ORDER BY cnt DESC
+        """), {"airport": airport, "year": str(year)}).fetchall()
+
+        if not rows:
+            raise ValueError(f"No cancellation data for {airport} in {year}")
+
+        total = sum(r.cnt for r in rows) or 1
+
+        reasons = [
+            CancellationReasonItem(
+                code=r.code,
+                label=self.CANCEL_LABELS.get(r.code, "Unknown"),
+                count=int(r.cnt),
+                pct_of_cancelled=round(r.cnt / total * 100, 1),
+            )
+            for r in rows
+        ]
+
+        return CancellationReasonsResponse(
+            airport=airport,
+            year=year,
+            total_cancellations=total,
+            reasons=reasons,
+        )
+
+
 # ---------------------------------------------------------------------------
 
 def nx_single_source(G, source, cutoff):
