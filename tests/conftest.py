@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.database import SessionLocal
+from app.api.v1.deps import get_db          # override the actual dependency
 from app.main import app
 from app.models import Base
 from app.services.graph_service import invalidate_graph_cache
@@ -128,7 +128,7 @@ def client(test_db):
         finally:
             session.close()
 
-    app.dependency_overrides[SessionLocal] = override_get_db
+    app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

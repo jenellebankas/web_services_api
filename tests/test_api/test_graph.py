@@ -281,8 +281,8 @@ class TestCancellationReasons:
             assert reason["count"] >= 1
 
     def test_cancellation_reasons_no_data_404(self, client):
-        # 2023 has no cancellations in seed data for ORD
-        response = client.get("/api/v1/graph/cancellation-reasons/ORD?year=2023")
+        # DEN has no cancellations in seed data in any year
+        response = client.get("/api/v1/graph/cancellation-reasons/DEN?year=2024")
         assert response.status_code == 404
 
     def test_cancellation_reasons_unknown_airport_404(self, client):
