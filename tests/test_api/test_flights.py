@@ -1,3 +1,4 @@
+# test/test_api/test_flights.py
 def test_get_flights_basic(client):
     response = client.get("/api/v1/flights/?origin=LAX&limit=5")
     assert response.status_code == 200
