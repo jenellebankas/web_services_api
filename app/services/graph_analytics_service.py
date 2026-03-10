@@ -147,7 +147,14 @@ class GraphAnalyticsService:
             """SQLite returns datetimes as strings — normalise to datetime."""
             if isinstance(val, datetime):
                 return val
-            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
+            for fmt in (
+                "%Y-%m-%d %H:%M:%S.%f",   # with microseconds
+                "%Y-%m-%d %H:%M:%S",
+                "%Y-%m-%d %H:%M",
+                "%Y-%m-%dT%H:%M:%S.%f",
+                "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%dT%H:%M",
+            ):
                 try:
                     return datetime.strptime(val, fmt)
                 except (ValueError, TypeError):
