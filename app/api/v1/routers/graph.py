@@ -59,7 +59,7 @@ def list_flight_dates(
 ):
     """All dates a specific carrier+flight_num combination operated."""
     rows = db.execute(text("""
-        SELECT DISTINCT flight_date
+        SELECT DISTINCT strftime('%Y-%m-%d', flight_date) AS flight_date
         FROM flights
         WHERE reporting_airline = :carrier
           AND flight_num_reporting_airline = :flight_num
@@ -88,7 +88,7 @@ def search_flights(
         SELECT
             reporting_airline,
             flight_num_reporting_airline AS flight_num,
-            flight_date,
+            strftime('%Y-%m-%d', flight_date) AS flight_date,
             origin,
             dest,
             crs_dep_time,

@@ -251,6 +251,7 @@ class FlightLookupItem(BaseModel):
 
 # -------- Ripple Effect --------
 
+
 class RippleHop(BaseModel):
     flight_num: str
     origin: str
