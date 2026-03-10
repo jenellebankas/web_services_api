@@ -32,13 +32,31 @@ class AnalyticsService:
         if total == 0:
             raise ValueError("No data")
 
+        worst_day_row = self.db.execute(
+            text("""
+                SELECT strftime('%w', flight_date) AS dow,
+                       AVG(COALESCE(arr_delay_minutes, 0)) AS avg_delay
+                FROM flights
+                WHERE origin = :airport
+                GROUP BY dow
+                ORDER BY avg_delay DESC
+                LIMIT 1
+            """), {"airport": airport}
+        ).fetchone()
+
+        dow_map = {
+            "0": "Sunday", "1": "Monday", "2": "Tuesday",
+            "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday"
+        }
+        worst_day = dow_map.get(str(worst_day_row.dow), "Unknown") if worst_day_row else "Unknown"
+
         return AirportDelaysResponse(
             airport=airport,
             total_flights=int(total),
             avg_arrival_delay=round(float(result.avg_delay or 0), 1),
             delay_rate=round(float(result.delayed or 0) / total, 3),
             cancel_rate=round(float(result.cancelled or 0) / total, 3),
-            worst_day="Monday"
+            worst_day=worst_day
         )
 
     def get_disruption_score(self, airport: str, year: int = 2024) -> DisruptionScoreResponse:
