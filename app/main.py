@@ -15,25 +15,27 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# ADD CORS MIDDLEWARE
+# adding cors middleware to connect streamlit dashboard
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://*.streamlit.app"],  # Streamlit Cloud
+    allow_origins=["https://*.streamlit.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+# health endpoint for render
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
+# available endpoints
 @app.get("/")
 async def root():
     return {
-        "message": "Aviation Disruption API",
+        "message": "US Aviation Disruption API",
         "docs": "/docs",
         "dashboard": "/dashboard",
         "flights": "/api/v1/flights",
@@ -42,6 +44,7 @@ async def root():
     }
 
 
+# dashboard redirect pointing to streamlit
 @app.get("/dashboard")
 async def dashboard_redirect():
     return RedirectResponse(url="https://webservicesapi-dashboard.streamlit.app")
@@ -49,4 +52,4 @@ async def dashboard_redirect():
 
 app.include_router(flights.router, prefix="/api/v1", tags=["flights"])
 app.include_router(analytics.router, prefix="/api/v1", tags=["analytics"])
-app.include_router(graph.router,     prefix="/api/v1", tags=["graph"])
+app.include_router(graph.router, prefix="/api/v1", tags=["graph"])

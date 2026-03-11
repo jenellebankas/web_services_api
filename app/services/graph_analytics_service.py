@@ -1,8 +1,8 @@
 # app/services/graph_analytics_service.py
 from __future__ import annotations
 
-from datetime import date
-from typing import Any, Dict, List
+from datetime import date, datetime
+from typing import Any, Dict
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -30,10 +30,6 @@ class GraphAnalyticsService:
     def __init__(self, db: Session):
         self.db = db
 
-    # ------------------------------------------------------------------
-    # Contagion score
-    # ------------------------------------------------------------------
-
     def get_contagion_score(self, airport: str) -> ContagionResponse:
         G = get_cached_graph(self.db)
 
@@ -52,16 +48,11 @@ class GraphAnalyticsService:
             interpretation=_score_label(s["composite_score"]),
         )
 
-    # ------------------------------------------------------------------
-    # Contagion leaderboard  (top / bottom N airports by composite score)
-    # ------------------------------------------------------------------
-
-    def get_contagion_leaderboard(
-        self, limit: int = 10
-    ) -> Dict[str, Any]:
+    def get_contagion_leaderboard(self, limit: int = 10) -> Dict[str, Any]:
         G = get_cached_graph(self.db)
         scores = compute_contagion_scores(G)
 
+        # rank calculated contagion score
         ranked = sorted(
             [{"airport_code": k, **v} for k, v in scores.items()],
             key=lambda x: x["composite_score"],
@@ -74,12 +65,8 @@ class GraphAnalyticsService:
             "total_airports": len(ranked),
         }
 
-    # ------------------------------------------------------------------
-    # Network neighbours  (airports reachable within N hops)
-    # ------------------------------------------------------------------
-
     def get_network_neighbors(
-        self, airport: str, depth: int = 1
+            self, airport: str, depth: int = 1
     ) -> NetworkNeighborsResponse:
         G = get_cached_graph(self.db)
 
@@ -101,12 +88,8 @@ class GraphAnalyticsService:
             neighbors=neighbors,
         )
 
-    # ------------------------------------------------------------------
-    # Ripple effect
-    # ------------------------------------------------------------------
-
     def get_ripple_effect(
-        self, reporting_airline: str, flight_num: int, flight_date: date, initial_delay: float
+            self, reporting_airline: str, flight_num: int, flight_date: date, initial_delay: float
     ) -> RippleResponse:
         """
         Look up all legs flown by the same aircraft on `flight_date`
@@ -129,9 +112,9 @@ class GraphAnalyticsService:
                 ORDER BY crs_dep_time ASC
             """),
             {
-                "carrier":    reporting_airline.upper(),
+                "carrier": reporting_airline.upper(),
                 "flight_num": flight_num,
-                "fdate":      str(flight_date),
+                "fdate": str(flight_date),
             },
         ).fetchall()
 
@@ -141,19 +124,17 @@ class GraphAnalyticsService:
                 f"flight {flight_num} on {flight_date}"
             )
 
-        from datetime import datetime
-
         def _parse_dt(val):
             """SQLite returns datetimes as strings — normalise to datetime."""
             if isinstance(val, datetime):
                 return val
             for fmt in (
-                "%Y-%m-%d %H:%M:%S.%f",   # with microseconds
-                "%Y-%m-%d %H:%M:%S",
-                "%Y-%m-%d %H:%M",
-                "%Y-%m-%dT%H:%M:%S.%f",
-                "%Y-%m-%dT%H:%M:%S",
-                "%Y-%m-%dT%H:%M",
+                    "%Y-%m-%d %H:%M:%S.%f",  # with microseconds
+                    "%Y-%m-%d %H:%M:%S",
+                    "%Y-%m-%d %H:%M",
+                    "%Y-%m-%dT%H:%M:%S.%f",
+                    "%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%dT%H:%M",
             ):
                 try:
                     return datetime.strptime(val, fmt)
@@ -163,9 +144,9 @@ class GraphAnalyticsService:
 
         schedule = [
             {
-                "flight_num":   str(r.flight_num),
-                "origin":       r.origin,
-                "dest":         r.dest,
+                "flight_num": str(r.flight_num),
+                "origin": r.origin,
+                "dest": r.dest,
                 "crs_dep_time": _parse_dt(r.crs_dep_time),
                 "crs_arr_time": _parse_dt(r.crs_arr_time),
             }
@@ -188,22 +169,7 @@ class GraphAnalyticsService:
             final_carried_delay=final_carried,
         )
 
-
-# ---------------------------------------------------------------------------
-# Delay cause breakdown
-# ---------------------------------------------------------------------------
-
-    def get_delay_cause_breakdown(
-        self, airport: str, year: int = 2024
-    ) -> DelayCauseBreakdownResponse:
-        CAUSE_COLS = {
-            "Carrier":      "carrier_delay",
-            "Weather":      "weather_delay",
-            "NAS":          "nas_delay",
-            "Security":     "security_delay",
-            "Late Aircraft":"late_aircraft_delay",
-        }
-
+    def get_delay_cause_breakdown(self, airport: str, year: int = 2024) -> DelayCauseBreakdownResponse:
         # One query: sum each cause column + count flights where each is > 0
         row = self.db.execute(text("""
             SELECT
@@ -228,11 +194,11 @@ class GraphAnalyticsService:
             raise ValueError(f"No delay data for {airport} in {year}")
 
         raw = {
-            "Carrier":       (int(row.carrier_mins or 0),      int(row.carrier_flights or 0)),
-            "Weather":       (int(row.weather_mins or 0),      int(row.weather_flights or 0)),
-            "NAS":           (int(row.nas_mins or 0),          int(row.nas_flights or 0)),
-            "Security":      (int(row.security_mins or 0),     int(row.security_flights or 0)),
-            "Late Aircraft": (int(row.late_aircraft_mins or 0),int(row.late_aircraft_flights or 0)),
+            "Carrier": (int(row.carrier_mins or 0), int(row.carrier_flights or 0)),
+            "Weather": (int(row.weather_mins or 0), int(row.weather_flights or 0)),
+            "NAS": (int(row.nas_mins or 0), int(row.nas_flights or 0)),
+            "Security": (int(row.security_mins or 0), int(row.security_flights or 0)),
+            "Late Aircraft": (int(row.late_aircraft_mins or 0), int(row.late_aircraft_flights or 0)),
         }
 
         total_mins = sum(v[0] for v in raw.values()) or 1  # avoid div/0
@@ -259,10 +225,6 @@ class GraphAnalyticsService:
             causes=causes,
         )
 
-    # ------------------------------------------------------------------
-    # Cancellation reasons
-    # ------------------------------------------------------------------
-
     CANCEL_LABELS = {
         "A": "Carrier",
         "B": "Weather",
@@ -271,7 +233,7 @@ class GraphAnalyticsService:
     }
 
     def get_cancellation_reasons(
-        self, airport: str, year: int = 2024
+            self, airport: str, year: int = 2024
     ) -> CancellationReasonsResponse:
         rows = self.db.execute(text("""
             SELECT
@@ -308,8 +270,7 @@ class GraphAnalyticsService:
         )
 
 
-# ---------------------------------------------------------------------------
-
+# find the shortest path for a single source
 def nx_single_source(G, source, cutoff):
     import networkx as nx
     return nx.single_source_shortest_path_length(G, source, cutoff=cutoff)

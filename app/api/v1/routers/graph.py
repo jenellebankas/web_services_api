@@ -35,8 +35,8 @@ def list_carriers(db: Session = Depends(get_db)):
 # 0b. LIST FLIGHT NUMBERS FOR A CARRIER
 @router.get("/flights/numbers", response_model=List[int])
 def list_flight_numbers(
-    carrier: str = Query(..., min_length=2, max_length=3),
-    db: Session = Depends(get_db),
+        carrier: str = Query(..., min_length=2, max_length=3),
+        db: Session = Depends(get_db),
 ):
     """All flight numbers operated by a carrier, sorted."""
     rows = db.execute(text("""
@@ -53,9 +53,9 @@ def list_flight_numbers(
 # 0c. LIST DATES A SPECIFIC FLIGHT OPERATED
 @router.get("/flights/dates", response_model=List[str])
 def list_flight_dates(
-    carrier: str = Query(..., min_length=2, max_length=3),
-    flight_num: int = Query(...),
-    db: Session = Depends(get_db),
+        carrier: str = Query(..., min_length=2, max_length=3),
+        flight_num: int = Query(...),
+        db: Session = Depends(get_db),
 ):
     """All dates a specific carrier+flight_num combination operated."""
     rows = db.execute(text("""
@@ -76,9 +76,9 @@ def list_flight_dates(
 # 0d. SEARCH FLIGHTS (free-text, for autocomplete)
 @router.get("/flights/search", response_model=List[FlightLookupItem])
 def search_flights(
-    carrier: str = Query(..., min_length=2, max_length=3),
-    flight_num: int = Query(...),
-    db: Session = Depends(get_db),
+        carrier: str = Query(..., min_length=2, max_length=3),
+        flight_num: int = Query(...),
+        db: Session = Depends(get_db),
 ):
     """
     Returns all origin→dest legs for a carrier+flight_num across all dates,
@@ -123,13 +123,13 @@ def search_flights(
 # 1. RIPPLE EFFECT
 @router.get("/ripple-effect", response_model=RippleResponse)
 def ripple_effect(
-    carrier: str = Query(..., min_length=2, max_length=3,
-                         description="Reporting airline code e.g. AA, DL, UA"),
-    flight_num: int = Query(..., description="Flight number e.g. 1234"),
-    flight_date: date = Query(..., description="Date in YYYY-MM-DD format"),
-    initial_delay: float = Query(..., ge=1, le=1440,
-                                 description="Seed delay in minutes (1–1440)"),
-    db: Session = Depends(get_db),
+        carrier: str = Query(..., min_length=2, max_length=3,
+                             description="Reporting airline code e.g. AA, DL, UA"),
+        flight_num: int = Query(..., description="Flight number e.g. 1234"),
+        flight_date: date = Query(..., description="Date in YYYY-MM-DD format"),
+        initial_delay: float = Query(..., ge=1, le=1440,
+                                     description="Seed delay in minutes (1–1440)"),
+        db: Session = Depends(get_db),
 ):
     """
     Simulate how an initial departure delay propagates through every subsequent
@@ -149,8 +149,8 @@ def ripple_effect(
 # 2. CONTAGION SCORE  (single airport)
 @router.get("/contagion-score/{airport}", response_model=ContagionResponse)
 def contagion_score(
-    airport: str,
-    db: Session = Depends(get_db),
+        airport: str,
+        db: Session = Depends(get_db),
 ):
     """
     Returns a composite network-centrality score (0–1) for an airport,
@@ -172,9 +172,9 @@ def contagion_score(
 # 3. CONTAGION LEADERBOARD
 @router.get("/contagion-leaderboard")
 def contagion_leaderboard(
-    limit: int = Query(10, ge=1, le=50,
-                       description="Number of airports to return at each end"),
-    db: Session = Depends(get_db),
+        limit: int = Query(10, ge=1, le=50,
+                           description="Number of airports to return at each end"),
+        db: Session = Depends(get_db),
 ):
     """
     Returns the most and least network-influential airports ranked by
@@ -189,12 +189,12 @@ def contagion_leaderboard(
 # 4. NETWORK NEIGHBOURS
 @router.get("/network-neighbors/{airport}", response_model=NetworkNeighborsResponse)
 def network_neighbors(
-    airport: str,
-    depth: int = Query(
-        default=1, ge=1, le=3,
-        description="How many hops out to explore (max 3 to keep response size sane)"
-    ),
-    db: Session = Depends(get_db),
+        airport: str,
+        depth: int = Query(
+            default=1, ge=1, le=3,
+            description="How many hops out to explore (max 3 to keep response size sane)"
+        ),
+        db: Session = Depends(get_db),
 ):
     """
     Returns all airports reachable from `airport` within `depth` connecting
@@ -211,9 +211,9 @@ def network_neighbors(
 # 5. DELAY CAUSE BREAKDOWN
 @router.get("/delay-causes/{airport}", response_model=DelayCauseBreakdownResponse)
 def delay_cause_breakdown(
-    airport: str,
-    year: int = Query(2024, ge=2023, le=2024),
-    db: Session = Depends(get_db),
+        airport: str,
+        year: int = Query(2024, ge=2023, le=2024),
+        db: Session = Depends(get_db),
 ):
     """
     Breaks down total delay minutes at an airport by cause:
@@ -231,9 +231,9 @@ def delay_cause_breakdown(
 # 6. CANCELLATION REASONS
 @router.get("/cancellation-reasons/{airport}", response_model=CancellationReasonsResponse)
 def cancellation_reasons(
-    airport: str,
-    year: int = Query(2024, ge=2023, le=2024),
-    db: Session = Depends(get_db),
+        airport: str,
+        year: int = Query(2024, ge=2023, le=2024),
+        db: Session = Depends(get_db),
 ):
     """
     Decodes BTS cancellation codes into human-readable reasons:

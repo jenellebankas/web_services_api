@@ -5,8 +5,7 @@ from typing import Optional, List
 from pydantic import BaseModel, ConfigDict
 
 
-# ========== FLIGHT SCHEMAS ==========
-
+# FLIGHT SCHEMAS
 class FlightBase(BaseModel):
     flight_date: date
     reporting_airline: str
@@ -32,15 +31,13 @@ class FlightBase(BaseModel):
     distance: Optional[int] = None
 
 
-# -------- For POST / create --------
+# POST/CREATE
 class FlightCreate(FlightBase):
     """Used when creating a new flight."""
     pass
 
 
-# -------- For PUT/PATCH / update --------
-
-
+# PUT/PATCH/UPDATE
 class FlightUpdate(BaseModel):
     """Used when updating an existing flight (all fields optional)."""
     flight_date: Optional[date] = None
@@ -67,14 +64,14 @@ class FlightUpdate(BaseModel):
     distance: Optional[float] = None
 
 
+# SIMPLE READ
 class FlightRead(FlightBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
 
 
-# ========== ANALYTICS RESPONSE SCHEMAS ==========
-
+# ANALYTICS SCHEMAS
 class AirportDelaysResponse(BaseModel):
     airport: str
     total_flights: int
@@ -123,7 +120,7 @@ class AirportComparisonResponse(BaseModel):
 
 
 class HourlyPatternItem(BaseModel):
-    hour: int  # 0–23
+    hour: int
     avg_dep_delay: float
     delay_rate: float
 
@@ -161,7 +158,7 @@ class PunctualityLeaderboardResponse(BaseModel):
 
 
 class BestTimeItem(BaseModel):
-    hour: int  # 0-23 (military time)
+    hour: int
     avg_dep_delay: float
     delay_rate: float
     total_flights: int
@@ -192,12 +189,6 @@ class RouteRiskResponse(BaseModel):
     routes: List[RouteRiskItem]
 
 
-# ============================================================
-# APPEND these classes to the bottom of app/schemas.py
-# ============================================================
-
-# -------- Delay Cause Breakdown --------
-
 class DelayCauseItem(BaseModel):
     cause: str
     total_minutes: int
@@ -217,11 +208,10 @@ class DelayCauseBreakdownResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# -------- Cancellation Reasons --------
-
+# CANCELLATION CODES (A, B, C, D) & REASONING
 class CancellationReasonItem(BaseModel):
-    code: str          # A / B / C / D
-    label: str         # human-readable
+    code: str
+    label: str
     count: int
     pct_of_cancelled: float
 
@@ -237,8 +227,7 @@ class CancellationReasonsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# -------- Flight Lookup (for ripple effect inputs) --------
-
+# RIPPLE
 class FlightLookupItem(BaseModel):
     reporting_airline: str
     flight_num: int
@@ -249,8 +238,6 @@ class FlightLookupItem(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-# -------- Ripple Effect --------
-
 
 class RippleHop(BaseModel):
     flight_num: str
@@ -259,7 +246,7 @@ class RippleHop(BaseModel):
     crs_dep_time: datetime
     estimated_delay_mins: float
     delay_absorbed_mins: float
-    source: str  # "origin" | "propagated" | "recovered"
+    source: str
 
 
 class RippleResponse(BaseModel):
@@ -274,8 +261,7 @@ class RippleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# -------- Contagion Score --------
-
+# CONTAGION
 class ContagionResponse(BaseModel):
     airport_code: str
     composite_score: float
@@ -287,8 +273,7 @@ class ContagionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# -------- Network Neighbours --------
-
+# NETWORK
 class NetworkNeighborItem(BaseModel):
     airport: str
     hops: int

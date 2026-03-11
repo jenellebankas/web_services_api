@@ -11,6 +11,7 @@ from app.schemas import (
     YearOverYearResponse
 )
 
+# for ease of assigning day of the week
 DOW_MAP = {0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat"}
 
 
@@ -18,6 +19,7 @@ class AnalyticsService:
     def __init__(self, db: Session):
         self.db = db
 
+    # use coalesce to deal with null vals
     def get_airport_delays(self, airport: str) -> AirportDelaysResponse:
         result = self.db.execute(
             text("""
@@ -44,6 +46,7 @@ class AnalyticsService:
             """), {"airport": airport}
         ).fetchone()
 
+        # re defined here so that key is string
         dow_map = {
             "0": "Sunday", "1": "Monday", "2": "Tuesday",
             "3": "Wednesday", "4": "Thursday", "5": "Friday", "6": "Saturday"
@@ -72,7 +75,7 @@ class AnalyticsService:
               AND strftime('%Y', flight_date) = :year
         """), {"airport": airport, "year": str(year)}).fetchone()
 
-        # Previous year stats (if available)
+        # Previous year stats - only if available
         prev_year = year - 1
         previous = self.db.execute(text("""
             SELECT 
@@ -168,7 +171,7 @@ class AnalyticsService:
         if len(airport_list) == 0:
             raise ValueError("No airports provided")
 
-        # single airport (including LAX,LAX → just LAX)
+        # single airport
         if len(airport_list) == 1:
             airport = airport_list[0]
             result = self.db.execute(
@@ -212,7 +215,8 @@ class AnalyticsService:
         items = []
         for row in result:
             total = row.total or 0
-            if total == 0: continue
+            if total == 0:
+                continue
             items.append(AirportComparisonItem(
                 airport=row.airport,
                 total_flights=int(total),
@@ -241,7 +245,8 @@ class AnalyticsService:
         hours = []
         for row in result:
             total = row.total or 0
-            if total == 0 or row.hour is None: continue
+            if total == 0 or row.hour is None:
+                continue
             hours.append(HourlyPatternItem(
                 hour=int(row.hour),
                 avg_dep_delay=round(float(row.avg_dep_delay or 0), 1),
@@ -268,7 +273,8 @@ class AnalyticsService:
         days = []
         for row in result:
             total = row.total or 0
-            if total == 0 or row.dow is None: continue
+            if total == 0 or row.dow is None:
+                continue
             label = DOW_MAP.get(int(row.dow), str(row.dow))
             days.append(WeeklyPatternItem(
                 dow=label,
@@ -296,7 +302,8 @@ class AnalyticsService:
         items = []
         for row in rows:
             total = int(row["total_flights"] or 0)
-            if total < min_flights: continue
+            if total < min_flights:
+                continue
             delayed = int(row["delayed_flights"] or 0)
             delay_rate, otp = delayed / total, 1.0 - delayed / total
             items.append(LeaderboardItem(
@@ -343,8 +350,8 @@ class AnalyticsService:
 
         sorted_hours = sorted(hours, key=lambda x: x.delay_rate)
         best, worst = sorted_hours[:top_n], sorted_hours[-top_n:]
-        improvement = ((worst[0].delay_rate - best[0].delay_rate) / worst[0].delay_rate * 100) if worst[
-                                                                                                      0].delay_rate > 0 else 0
+        improvement = ((worst[0].delay_rate - best[0].delay_rate) / worst[0].delay_rate * 100) \
+            if worst[0].delay_rate > 0 else 0
 
         return BestTimeResponse(
             airport=airport.upper(),

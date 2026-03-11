@@ -7,10 +7,6 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 
-# ---------------------------------------------------------------------------
-# Graph construction
-# ---------------------------------------------------------------------------
-
 def build_flight_graph(db: Session) -> nx.DiGraph:
     """
     Build a directed graph from aggregated route statistics.
@@ -52,10 +48,6 @@ def build_flight_graph(db: Session) -> nx.DiGraph:
     return G
 
 
-# ---------------------------------------------------------------------------
-# In-process cache  (one graph per process; cleared on demand)
-# ---------------------------------------------------------------------------
-
 _cached_graph: nx.DiGraph | None = None
 
 
@@ -70,10 +62,6 @@ def invalidate_graph_cache() -> None:
     global _cached_graph
     _cached_graph = None
 
-
-# ---------------------------------------------------------------------------
-# Centrality / contagion helpers
-# ---------------------------------------------------------------------------
 
 def compute_contagion_scores(G: nx.DiGraph) -> Dict[str, Dict[str, float]]:
     """
@@ -117,10 +105,6 @@ def _score_label(score: float) -> str:
         return "Regional hub — localised impact"
     return "Spoke airport — minimal network impact"
 
-
-# ---------------------------------------------------------------------------
-# Ripple-effect chain
-# ---------------------------------------------------------------------------
 
 MIN_TURNAROUND_MINUTES = 30  # below this ground time, delay cannot be absorbed
 
