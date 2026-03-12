@@ -10,13 +10,14 @@ Usage:
 """
 import os
 import sys
+from datetime import datetime, timezone
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from datetime import datetime
 from sqlalchemy.orm import Session
+
 from app.database import SessionLocal, engine
 from app.models import Base, APIKey
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,7 +34,7 @@ admin_key = APIKey(
     key=key_value,
     name="admin",
     is_active=True,
-    created_at=datetime.utcnow(),
+    created_at=datetime.now(timezone.utc),
 )
 db.add(admin_key)
 db.commit()

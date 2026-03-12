@@ -1,3 +1,4 @@
+# app/services/flight_service.py
 from typing import List, Dict, Any, Optional
 
 from sqlalchemy import func
@@ -33,7 +34,7 @@ class FlightService:
             self.db.add(db_flight)
             self.db.commit()
             self.db.refresh(db_flight)
-            return FlightRead.from_orm(db_flight)  # Explicit Pydantic conversion
+            return FlightRead.model_validate(db_flight)  # Explicit Pydantic conversion
         except Exception as e:
             self.db.rollback()
             raise ValueError(f"Flight creation failed: {str(e)}")
@@ -43,17 +44,17 @@ class FlightService:
         if flight_id <= 0:
             raise ValueError("Flight ID must be positive")
 
-        flight = self.db.query(models.Flight).get(flight_id)
+        flight = self.db.get(models.Flight, flight_id)
         if not flight:
             raise ValueError(f"Flight {flight_id} not found")
-        return FlightRead.from_orm(flight)
+        return FlightRead.model_validate(flight)
 
     def update_flight(self, flight_id: int, flight_update: FlightUpdate) -> FlightRead:
         """Update existing flight"""
         if flight_id <= 0:
             raise ValueError("Flight ID must be positive")
 
-        flight = self.db.query(models.Flight).get(flight_id)
+        flight = self.db.get(models.Flight, flight_id)
         if not flight:
             raise ValueError(f"Flight {flight_id} not found")
 
@@ -63,7 +64,7 @@ class FlightService:
                 setattr(flight, field, value)
             self.db.commit()
             self.db.refresh(flight)
-            return FlightRead.from_orm(flight)
+            return FlightRead.model_validate(flight)
         except Exception:
             self.db.rollback()
             raise ValueError("Flight update failed")
@@ -73,7 +74,7 @@ class FlightService:
         if flight_id <= 0:
             raise ValueError("Flight ID must be positive")
 
-        flight = self.db.query(models.Flight).get(flight_id)
+        flight = self.db.get(models.Flight, flight_id)
         if not flight:
             raise ValueError(f"Flight {flight_id} not found")
 

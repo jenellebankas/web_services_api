@@ -1,8 +1,8 @@
 # app/api/v1/routers/keys.py
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, verify_api_key
@@ -22,8 +22,7 @@ class APIKeyRead(BaseModel):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class APIKeyRevoke(BaseModel):
@@ -31,13 +30,8 @@ class APIKeyRevoke(BaseModel):
     name: str
     is_active: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 
 @router.post("/", response_model=APIKeyRead, status_code=201)
 def create_api_key(
@@ -53,7 +47,7 @@ def create_api_key(
         key=APIKey.generate(),
         name=payload.name,
         is_active=True,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.add(new_key)
     db.commit()

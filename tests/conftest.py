@@ -129,6 +129,9 @@ def db_session(test_db):
 
 @pytest.fixture(scope="function")
 def client(test_db):
+    from app.api.v1.deps import verify_api_key
+    from app.models import APIKey
+
     def override_get_db():
         test_engine = create_engine(test_db, connect_args={"check_same_thread": False})
         TestSessionLocal = sessionmaker(bind=test_engine)
@@ -138,7 +141,11 @@ def client(test_db):
         finally:
             session.close()
 
+    def override_verify_api_key():
+        return APIKey(id=1, key=TEST_API_KEY, name="test-client", is_active=True)
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[verify_api_key] = override_verify_api_key
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

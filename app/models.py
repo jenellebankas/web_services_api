@@ -1,6 +1,6 @@
 # app/models.py
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, Integer, String, Date, DateTime, Float, Boolean
 
@@ -57,7 +57,7 @@ class APIKey(Base):
     key = Column(String(64), unique=True, index=True, nullable=False)
     name = Column(String(100), nullable=False)  # e.g. "dashboard", "admin"
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.now(datetime.utcnow()), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     @staticmethod
     def generate() -> str:
