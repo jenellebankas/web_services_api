@@ -121,9 +121,9 @@ API keys are managed via `/api/v1/keys` (requires an existing valid key). To gen
 
 ```
 
-## Local Setup 
+# Local Setup 
 
-# *Prerequisites*
+## *Prerequisites*
 
 - Python 3.12+
 - pip 
