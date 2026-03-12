@@ -57,7 +57,68 @@ API keys are managed via `/api/v1/keys` (requires an existing valid key). To gen
 
 
 ## Project Structure 
+
 ```
+├── README.md
+├── app
+│   ├── __init__.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   └── v1
+│   │       ├── __init__.py
+│   │       ├── deps.py
+│   │       └── routers
+│   │           ├── __init__.py
+│   │           ├── analytics.py
+│   │           ├── flights.py
+│   │           ├── graph.py
+│   │           └── keys.py
+│   ├── core
+│   │   ├── __init__.py
+│   │   └── config.py
+│   ├── database.py
+│   ├── main.py
+│   ├── models.py
+│   ├── schemas.py
+│   └── services
+│       ├── __init__.py
+│       ├── analytics_service.py
+│       ├── flight_service.py
+│       ├── graph_analytics_service.py
+│       └── graph_service.py
+├── aviation.db
+├── dashboard
+│   ├── __init__.py
+│   ├── components
+│   │   ├── __init__.py
+│   │   ├── api.py
+│   │   └── metrics.py
+│   └── streamlit_app.py
+├── datasets
+│   ├── flights_2023.parquet
+│   └── flights_2024.parquet
+├── docs
+│   ├── aviation_api_documentation.pdf
+│   └── project-requirements.md
+├── notebooks
+│   └── 01_data_exploration.ipynb
+├── requirements.txt
+├── scripts
+│   ├── balanced_dataset.py
+│   ├── create_admin_key.py
+│   ├── reset_db.py
+│   └── seed_db.py
+└── tests
+    ├── __init__.py
+    ├── conftest.py
+    ├── test_api
+    │   ├── test_analytics.py
+    │   ├── test_flights.py
+    │   └── test_graph.py
+    └── test_services
+        ├── test_services_analytics.py
+        └── test_services_graph.py
+
 ```
 
 ## Local Setup 
