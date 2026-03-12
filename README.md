@@ -1,57 +1,165 @@
-# US Flight Disruption
+# US Aviation Disruption API 
 
-## File Tree
+Data-driven REST API for US flight delay analytics, built on the Bureau of Transportation Statistics (BTS) data for 2023-2024.
+
+Live API: https://web-services-api.onrender.com
+Swagger Docs: https://web-services-api.onrender.com/docs
+Live Dashboard: https://webservicesapi-dashboard.streamlit.app
+
+## Overview
+
+## Tech Stack
+
+## 
+
+## Project Structure 
 ```
-.
-├── README.md
-├── app
-│   ├── __init__.py
-│   ├── api
-│   │   ├── __init__.py
-│   │   └── v1
-│   │       ├── __init__.py
-│   │       ├── deps.py
-│   │       └── routers
-│   │           ├── __init__.py
-│   │           ├── airports.py
-│   │           ├── analytics.py
-│   │           └── flights.py
-│   ├── core
-│   │   ├── __init__.py
-│   │   ├── config.py
-│   │   └── security.py
-│   ├── database.py
-│   ├── main.py
-│   ├── models.py
-│   ├── schemas.py
-│   └── services
-│       ├── __init__.py
-│       ├── analystics_service.py
-│       └── flight_service.py
-├── data
-│   ├── airports_2023.csv
-│   ├── airports_2024.csv
-│   ├── flights_2023.csv
-│   └── flights_2024.csv
-├── deployment
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   └── pythonanywhere.sh
-├── docs
-│   ├── ERD.png
-│   ├── api.html
-│   └── architecture.png
-├── pyproject.toml
-├── requirements.txt
-├── scripts
-│   ├── reset_db.py
-│   └── seed_db.py
-└── tests
-    ├── __init__.py
-    ├── conftest.py
-    ├── test_api
-    │   ├── test_analytics.py
-    │   └── test_flights.py
-    └── test_services
-        └── test_analytics.py
 ```
+
+## Local Setup 
+
+*Prerequisites*
+
+- Python 3.12+
+- pip 
+
+1. Clone the repo
+```bash
+git clone https://github.com/jenellebankas/web_services_api.git
+cd web_services_api
+```
+
+2. Create a virtual environment
+```bash
+python -m venv .venv
+source .venv/bin/activate
+.venv\Scripts\activate
+```
+
+3. Install dependencies 
+```bash
+pip install -r requirements.txt
+```
+
+4. Seed the database
+```bash
+python scripts/balanced_dataset.py
+```
+
+- must note that using balanced_dataset.py ensures a stratified dataset if seed_db.py used, data is just split by number.
+
+5. Run the API
+```bash
+uvicorn app.main:app --reload
+```
+
+The API will be available at: http://localhost:8000
+Interactive docs at: http://localhost:8000/docs
+
+If you want to run the dashboard 
+```bash
+cd dashboard
+streamlit run streamlit_app.py
+```
+
+## Running Tests 
+
+```bash
+pytest
+```
+
+The expected output is 70 passed.
+
+For verbose output:
+```bash
+pytest -v
+```
+for API tests only:
+```bash
+pytest tests/test_api/
+```
+For Service tests only:
+
+```bash
+pytest tests/test_services/
+```
+
+## API Endpoints 
+
+### Flights (CRUD)
+
+| Method | Endpoint             | Description                                              |
+|--------|----------------------|----------------------------------------------------------|
+| GET    | /api/v1/flights/     | List flights (filterable by origin, dest, airline, date) |
+| GET    | /api/v1/flights/{id} | Get flight by ID                                         |
+| POST   | /api/v1/flights/     | Create new flight record                                 |
+| PUT    | /api/v1/flights/{id} | Update flight record                                     |
+| DELETE | /api/v1/flights/{id} | Delete flight record                                     |
+
+
+### Analytics
+ 
+| Endpoint                                        | Description                               |
+|-------------------------------------------------|-------------------------------------------|
+| `/api/v1/analytics/airport-delays/{airport}`    | Delay stats for an airport                |
+| `/api/v1/analytics/disruption-score/{airport}`  | Composite disruption score (0–100)        |
+| `/api/v1/analytics/year-over-year/{airport}`    | 2023 vs 2024 comparison                   |
+| `/api/v1/analytics/compare-airports`            | Side-by-side multi-airport comparison     |
+| `/api/v1/analytics/route-risk`                  | Risk score for origin→destination routes  |
+| `/api/v1/analytics/best-time/{airport}`         | Best/worst hours to depart                |
+| `/api/v1/analytics/daily-pattern`               | Hourly delay pattern                      |
+| `/api/v1/analytics/weekly-pattern`              | Day-of-week delay pattern                 |
+| `/api/v1/analytics/leaderboard/punctuality`     | Best/worst airports by OTP                |
+| `/api/v1/analytics/carrier-performance`         | Airline on-time performance ranking       |
+| `/api/v1/analytics/monthly-trends`              | Monthly delay/cancellation trends         |
+| `/api/v1/analytics/system-overview`             | National-level summary stats              |
+ 
+### Graph / Network Analysis
+ 
+| Endpoint                                        | Description                                                       |
+|-------------------------------------------------|-------------------------------------------------------------------|
+| `/api/v1/graph/contagion-score/{airport}`       | Network influence score (0–1)                                     |
+| `/api/v1/graph/contagion-leaderboard`           | Most/least influential airports                                   |
+| `/api/v1/graph/network-neighbors/{airport}`     | Airports reachable within N hops                                  |
+| `/api/v1/graph/ripple-effect`                   | Simulate delay propagation through aircraft schedule              |
+| `/api/v1/graph/delay-causes/{airport}`          | Delay minutes split by cause                                      |
+| `/api/v1/graph/cancellation-reasons/{airport}`  | Cancellation breakdown by BTS code                                |
+| `/api/v1/graph/flights/carriers`                | All carrier codes (for dropdowns)                                 |
+| `/api/v1/graph/flights/numbers`                 | Flight numbers for a carrier                                      |
+| `/api/v1/graph/flights/dates`                   | Dates a specific flight operated                                  |
+ 
+### System
+ 
+| Endpoint             | Description                                |
+|----------------------|--------------------------------------------|
+| `GET /health`        | Health check — returns `{"status": "ok"}`  |
+| `GET /docs`          | Interactive Swagger UI                     |
+| `GET /redoc`         | ReDoc documentation                        |
+| `GET /openapi.json`  | OpenAPI schema                             |
+
+
+## Data Source 
+
+US Bureau of Transportation Statistics (BTS) - On-Time Performance Data: https://www.transtats.bts.gov
+Dataset covers all domestic US flights for 2023 and 2024
+Licensed for academic and research use 
+
+## API Documentation 
+
+API documentation (PDF) is available in the repository:
+docs/aviation_api_docs.pdf
+
+Interactive Swagger UI: https://web-services-api.onrender.com/docs
+
+## Deployment 
+
+The API is currently deployed on Render (free tier) with automatic deployments triggered by pushes to main
+- Health check: GET /health
+- CORS configured for *.streamlit.app
+- Environment: Python 3.12, uvicorn
+
+## GenAI Declaration
+
+This project was developed with the assistance of Claude (Anthropic) Perplexit and ChatGPT, in accordance with COMP3011
+Green Light assessment policy. For full declaration, usage breakdown and coversation log exports please see the 
+technical report appendix.
