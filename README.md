@@ -1,16 +1,60 @@
 # US Aviation Disruption API 
 
-Data-driven REST API for US flight delay analytics, built on the Bureau of Transportation Statistics (BTS) data for 2023-2024.
+Data-driven REST API for US flight delay analytics, built on the Bureau of Transportation Statistics (BTS) data for 
+2023-2024.
 
 Live API: https://web-services-api.onrender.com
 Swagger Docs: https://web-services-api.onrender.com/docs
 Live Dashboard: https://webservicesapi-dashboard.streamlit.app
 
 ## Overview
-
+ 
+The Aviation Disruption API transforms ~1 million BTS flight records into actionable analytics. It provides standard 
+delay/cancellation metrics alongside a novel graph-based network analysis layer that models the US airport system as a 
+directed graph, enabling delay propagation simulation and network influence scoring.
+### Key Features
+ 
+- **18+ REST endpoints** across analytics, graph analysis, and CRUD
+- **Disruption scoring** — composite 0–100 score per airport/year
+- **Route risk analysis** — compare up to 10 routes by historical reliability
+- **Graph contagion scores** — NetworkX-based centrality scoring for network influence
+- **Ripple effect simulation** — propagate a seed delay through an aircraft's daily schedule
+- **Delay cause breakdown** — split delay minutes by carrier/weather/NAS/security/late aircraft
+- **Interactive Streamlit dashboard** connected to the live API
+ 
+---
+ 
 ## Tech Stack
+ 
+| Component        | Technology           | Reason                                         |
+|------------------|----------------------|------------------------------------------------|
+| API Framework    | FastAPI              | Auto-docs, async, Pydantic validation          |
+| Database         | SQLite + SQLAlchemy  | Zero-config, portable, read-heavy workload     |
+| Graph Analysis   | NetworkX             | Centrality algorithms, in-process graph cache  |
+| Dashboard        | Streamlit            | Rapid UI, direct API integration               |
+| Deployment       | Render               | Auto-deploy from GitHub, free tier             |
+| Testing          | pytest               | 70 tests — unit + integration                  |
 
-## 
+
+## Authentication
+
+Write endpoints (POST, PUT, DELETE) require an `X-API-Key` header. Read and analytics endpoints are public.
+
+```bash
+# Authenticated request
+curl -X POST https://web-services-api.onrender.com/api/v1/flights/ \
+  -H "X-API-Key: your-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{...}'
+
+# Public request — no key needed
+curl https://web-services-api.onrender.com/api/v1/analytics/disruption-score/JFK
+```
+
+API keys are managed via `/api/v1/keys` (requires an existing valid key). To generate the first admin key run 
+`python scripts/create_admin_key.py` after deployment. If this does not work run 
+`PYTHONPATH=. python scripts/create_admin_key.py` after deployment.
+
 
 ## Project Structure 
 ```
@@ -46,7 +90,8 @@ pip install -r requirements.txt
 python scripts/balanced_dataset.py
 ```
 
-- must note that using balanced_dataset.py ensures a stratified dataset if seed_db.py used, data is just split by number.
+- must note that using balanced_dataset.py ensures a stratified dataset if seed_db.py used, data is just split by 
+- number.
 
 ## 5. Run the API
 ```bash
