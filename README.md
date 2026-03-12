@@ -18,37 +18,37 @@ Live Dashboard: https://webservicesapi-dashboard.streamlit.app
 
 ## Local Setup 
 
-*Prerequisites*
+# *Prerequisites*
 
 - Python 3.12+
 - pip 
 
-1. Clone the repo
+## 1. Clone the repo
 ```bash
 git clone https://github.com/jenellebankas/web_services_api.git
 cd web_services_api
 ```
 
-2. Create a virtual environment
+## 2. Create a virtual environment
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 .venv\Scripts\activate
 ```
 
-3. Install dependencies 
+## 3. Install dependencies 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Seed the database
+## 4. Seed the database
 ```bash
 python scripts/balanced_dataset.py
 ```
 
 - must note that using balanced_dataset.py ensures a stratified dataset if seed_db.py used, data is just split by number.
 
-5. Run the API
+## 5. Run the API
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -88,13 +88,13 @@ pytest tests/test_services/
 
 ### Flights (CRUD)
 
-| Method | Endpoint             | Description                                              |
-|--------|----------------------|----------------------------------------------------------|
-| GET    | /api/v1/flights/     | List flights (filterable by origin, dest, airline, date) |
-| GET    | /api/v1/flights/{id} | Get flight by ID                                         |
-| POST   | /api/v1/flights/     | Create new flight record                                 |
-| PUT    | /api/v1/flights/{id} | Update flight record                                     |
-| DELETE | /api/v1/flights/{id} | Delete flight record                                     |
+| Method    | Endpoint                | Description                                              |
+|-----------|-------------------------|----------------------------------------------------------|
+| `GET`     | `/api/v1/flights/`      | List flights (filterable by origin, dest, airline, date) |
+| `GET`     | `/api/v1/flights/{id}`  | Get flight by ID                                         |
+| `POST`    | `/api/v1/flights/`      | Create new flight record                                 |
+| `PUT`     | `/api/v1/flights/{id}`  | Update flight record                                     |
+| `DELETE`  | `/api/v1/flights/{id}`  | Delete flight record                                     |
 
 
 ### Analytics
