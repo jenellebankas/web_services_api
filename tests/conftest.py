@@ -6,11 +6,16 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.api.v1.deps import get_db          # override the actual dependency
+from app.api.v1.deps import get_db
 from app.main import app
 from app.models import Base
 from app.services.graph_service import invalidate_graph_cache
 
+# ---------------------------------------------------------------------------
+# Test API key — used by all write-endpoint tests
+# ---------------------------------------------------------------------------
+TEST_API_KEY = "test-api-key-do-not-use-in-production"
+AUTH_HEADERS = {"X-API-Key": TEST_API_KEY}
 
 # ---------------------------------------------------------------------------
 # Seed rows — shared by all fixtures
@@ -84,11 +89,16 @@ VALUES
 ;
 """
 
+SEED_API_KEY_SQL = f"""
+INSERT INTO api_keys (key, name, is_active, created_at)
+VALUES ('{TEST_API_KEY}', 'test-client', 1, '2024-01-01 00:00:00');
+"""
+
 
 @pytest.fixture(scope="function")
 def test_db(tmp_path):
     test_db_path = tmp_path / "test_aviation.db"
-    test_db_url  = f"sqlite:///{test_db_path}"
+    test_db_url = f"sqlite:///{test_db_path}"
 
     test_engine = create_engine(test_db_url, connect_args={"check_same_thread": False})
     Base.metadata.create_all(bind=test_engine)
@@ -100,7 +110,7 @@ def test_db(tmp_path):
 
     yield test_db_url
 
-    invalidate_graph_cache()          # clear in-process graph after each test
+    invalidate_graph_cache()
     Base.metadata.drop_all(bind=test_engine)
     test_engine.dispose()
 

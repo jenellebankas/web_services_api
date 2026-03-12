@@ -4,14 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from app import models
-from app.api.v1.routers import flights, analytics, graph
+from app.api.v1.routers import flights, analytics, graph, keys
 from app.database import engine
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Aviation Disruption API",
-    description="REST API for aviation disruption analytics",
+    title="US Aviation Disruption API",
+    description="REST API for US aviation disruption analytics",
     version="1.0.0"
 )
 
@@ -53,3 +53,4 @@ async def dashboard_redirect():
 app.include_router(flights.router, prefix="/api/v1", tags=["flights"])
 app.include_router(analytics.router, prefix="/api/v1", tags=["analytics"])
 app.include_router(graph.router, prefix="/api/v1", tags=["graph"])
+app.include_router(keys.router,      prefix="/api/v1", tags=["authentication"])

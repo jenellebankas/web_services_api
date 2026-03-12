@@ -1,5 +1,8 @@
 # app/models.py
-from sqlalchemy import Column, Integer, String, Date, DateTime, Float
+import secrets
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, Date, DateTime, Float, Boolean
 
 from .database import Base
 
@@ -45,3 +48,18 @@ class Flight(Base):
     late_aircraft_delay = Column(Integer, nullable=True)
 
     distance = Column(Integer, nullable=True)
+
+
+class APIKey(Base):
+    __tablename__ = "api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(64), unique=True, index=True, nullable=False)
+    name = Column(String(100), nullable=False)  # e.g. "dashboard", "admin"
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.now(datetime.utcnow()), nullable=False)
+
+    @staticmethod
+    def generate() -> str:
+        """Generate a cryptographically secure API key."""
+        return secrets.token_urlsafe(32)

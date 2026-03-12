@@ -1,20 +1,22 @@
+# app/api/v1/routers/flights.py
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.api.v1.deps import get_db
+from app.api.v1.deps import get_db, verify_api_key
 from app.schemas import FlightRead, FlightCreate, FlightUpdate
 from app.services.flight_service import FlightService
 
-router = APIRouter(prefix="/flights", tags=["flights"])  # Add prefix for consistency
+router = APIRouter(prefix="/flights", tags=["flights"])
 
 
 # 1. CREATE FLIGHT (POST)
 @router.post("/", response_model=FlightRead, status_code=201)
 def create_flight(
         flight: FlightCreate,
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        _auth=Depends(verify_api_key),
 ):
     """Create new flight record"""
     service = FlightService(db)
@@ -45,7 +47,8 @@ def get_flight(
 def update_flight(
         flight_update: FlightUpdate,
         flight_id: int,
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        _auth=Depends(verify_api_key),
 ):
     """Update existing flight"""
     service = FlightService(db)
@@ -63,7 +66,8 @@ def update_flight(
 @router.delete("/{flight_id}", status_code=204)
 def delete_flight(
         flight_id: int,
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        _auth=Depends(verify_api_key),
 ):
     """Delete flight by ID"""
     service = FlightService(db)
