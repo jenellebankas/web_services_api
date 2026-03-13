@@ -140,7 +140,6 @@ cd web_services_api
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-.venv\Scripts\activate
 ```
 
 ## 3. Install dependencies 
