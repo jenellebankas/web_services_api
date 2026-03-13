@@ -14,6 +14,7 @@ Live Dashboard: https://webservicesapi-dashboard.streamlit.app
 The Aviation Disruption API transforms ~1 million BTS flight records into actionable analytics. It provides standard 
 delay/cancellation metrics alongside a novel graph-based network analysis layer that models the US airport system as a 
 directed graph, enabling delay propagation simulation and network influence scoring.
+
 ### Key Features
  
 - **18+ REST endpoints** across analytics, graph analysis, and CRUD
@@ -28,14 +29,14 @@ directed graph, enabling delay propagation simulation and network influence scor
  
 ## Tech Stack
  
-| Component        | Technology           | Reason                                         |
-|------------------|----------------------|------------------------------------------------|
-| API Framework    | FastAPI              | Auto-docs, async, Pydantic validation          |
-| Database         | SQLite + SQLAlchemy  | Zero-config, portable, read-heavy workload     |
-| Graph Analysis   | NetworkX             | Centrality algorithms, in-process graph cache  |
-| Dashboard        | Streamlit            | Rapid UI, direct API integration               |
-| Deployment       | Render               | Auto-deploy from GitHub, free tier             |
-| Testing          | pytest               | 70 tests — unit + integration                  |
+| Component        | Technology           | Reason                                        |
+|------------------|----------------------|-----------------------------------------------|
+| API Framework    | FastAPI              | Auto-docs, async, Pydantic validation         |
+| Database         | SQLite + SQLAlchemy  | Zero-config, portable, read-heavy workload    |
+| Graph Analysis   | NetworkX             | Centrality algorithms, in-process graph cache |
+| Dashboard        | Streamlit            | Rapid UI, direct API integration              |
+| Deployment       | Render               | Auto-deploy from GitHub, free tier            |
+| Testing          | pytest               | 81 tests — unit + integration                 |
 
 
 ## Authentication
@@ -57,6 +58,20 @@ API keys are managed via `/api/v1/keys` (requires an existing valid key). To gen
 `python scripts/create_admin_key.py` after deployment. If this does not work run 
 `PYTHONPATH=. python scripts/create_admin_key.py` after deployment.
 
+If you forget your key, you can run this in your terminal, :
+```bash
+PYTHONPATH=. python -c "
+from app.database import SessionLocal
+from app.models import APIKey
+db = SessionLocal()
+keys = db.query(APIKey).filter_by(is_active=True).all()
+for k in keys:
+    print(f'{k.name}: {k.key}')
+db.close()
+"
+```
+Then, retrieve your key and paste it into the authorise section at the top of the docs or in your request as 
+outlined above.
 
 ## Project Structure 
 
@@ -175,7 +190,7 @@ streamlit run streamlit_app.py
 pytest
 ```
 
-The expected output is 70 passed.
+The expected output is 81 passed.
 
 For verbose output:
 ```bash
